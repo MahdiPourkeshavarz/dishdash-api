@@ -1,0 +1,34 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable prettier/prettier */
+import {
+  IsString,
+  IsNotEmpty,
+  IsArray,
+  IsOptional,
+  IsNumber,
+} from 'class-validator';
+
+export class CreatePostDto {
+  @IsString()
+  @IsNotEmpty()
+  description: string;
+
+  @IsString()
+  @IsNotEmpty()
+  satisfaction: string;
+
+  @IsString()
+  @IsNotEmpty()
+  imageUrl: string;
+
+  @IsArray()
+  position: [number, number];
+
+  @IsString()
+  @IsOptional()
+  areaName?: string;
+
+  @IsNumber()
+  @IsOptional()
+  osmId?: number;
+}
