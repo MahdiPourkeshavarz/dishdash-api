@@ -1,9 +1,11 @@
 /* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -13,6 +15,7 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { ObjectId } from 'mongodb';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { Interaction } from 'src/interactions/entity/interaction.entity';
+import { UploadsService } from 'src/uploads/uploads.service';
 
 @Injectable()
 export class PostsService {
@@ -21,23 +24,28 @@ export class PostsService {
     private readonly postsRepository: MongoRepository<Post>,
     @InjectRepository(Interaction)
     private readonly interactionsRepository: MongoRepository<Interaction>,
+    private readonly uploadsService: UploadsService,
     // private readonly placesService: PlacesService,
   ) {}
 
-  async create(createPostDto: CreatePostDto, userId: string): Promise<Post> {
-    const { osmId, ...postData } = createPostDto;
+  async create(
+    createPostDto: CreatePostDto,
+    userId: string,
+    file: Express.Multer.File,
+  ): Promise<Post> {
+    if (!file) {
+      throw new InternalServerErrorException('Post image is required.');
+    }
+
+    const { url: imageUrl } = await this.uploadsService.saveFile(file);
 
     const newPost = this.postsRepository.create({
-      ...postData,
+      ...createPostDto,
+      imageUrl,
       userId,
       likes: 0,
       dislikes: 0,
     });
-
-    // In the future, you would add the logic here to find or create a Place
-    // based on the osmId and link it to the post.
-    // const place = await this.placesService.findOrCreateByOsmId(osmId);
-    // newPost.placeId = place._id.toHexString();
 
     return this.postsRepository.save(newPost);
   }
