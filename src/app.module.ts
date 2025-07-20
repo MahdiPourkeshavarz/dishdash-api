@@ -10,6 +10,8 @@ import { InteractionsModule } from './interactions/interactions.module';
 import { PlacesModule } from './places/places.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -25,6 +27,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         synchronize: true,
         autoLoadEntities: true,
       }),
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
     }),
     AuthModule,
     UsersModule,

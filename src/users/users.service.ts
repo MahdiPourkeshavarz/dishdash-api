@@ -1,4 +1,6 @@
 /* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
@@ -7,12 +9,16 @@ import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
 import { ObjectId } from 'mongodb';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UploadsService } from 'src/uploads/uploads.service';
+import { promises as fs } from 'fs';
+import { join } from 'path';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: MongoRepository<User>,
+    private readonly uploadsService: UploadsService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -32,11 +38,34 @@ export class UsersService {
     return this.usersRepository.findOneBy({ email });
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+  async update(
+    id: string,
+    updateUserDto: UpdateUserDto,
+    file?: Express.Multer.File,
+  ): Promise<User> {
     const user = await this.findById(id);
-
     if (!user) {
       throw new NotFoundException(`User with ID "${id}" not found`);
+    }
+
+    if (file) {
+      const oldImageUrl = user.image;
+      const { url: newImageUrl } = await this.uploadsService.saveFile(file);
+      user.image = newImageUrl;
+
+      if (oldImageUrl) {
+        try {
+          const oldImageFilename = oldImageUrl.split('/').pop();
+          if (oldImageFilename) {
+            await fs.unlink(join(process.cwd(), 'uploads', oldImageFilename));
+          }
+        } catch (error) {
+          console.error(
+            `Failed to delete old profile picture: ${oldImageUrl}`,
+            error,
+          );
+        }
+      }
     }
 
     Object.assign(user, updateUserDto);
