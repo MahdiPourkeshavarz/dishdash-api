@@ -19,8 +19,7 @@ import { join } from 'path';
       isGlobal: true,
     }),
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigModule],
+      inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'mongodb',
         url: configService.get('DATABASE_URL'),

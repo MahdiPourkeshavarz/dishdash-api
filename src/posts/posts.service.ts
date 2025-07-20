@@ -20,11 +20,11 @@ import { UploadsService } from 'src/uploads/uploads.service';
 @Injectable()
 export class PostsService {
   constructor(
+    private readonly uploadsService: UploadsService,
     @InjectRepository(Post)
     private readonly postsRepository: MongoRepository<Post>,
     @InjectRepository(Interaction)
     private readonly interactionsRepository: MongoRepository<Interaction>,
-    private readonly uploadsService: UploadsService,
     // private readonly placesService: PlacesService,
   ) {}
 

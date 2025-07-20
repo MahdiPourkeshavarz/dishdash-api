@@ -6,7 +6,6 @@ import { WishlistItem } from './entity/wishlist.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MongoRepository } from 'typeorm';
 import { UsersService } from 'src/users/users.service';
-import { PlacesService } from 'src/places/places.service';
 
 @Injectable()
 export class InteractionsService {
@@ -14,7 +13,6 @@ export class InteractionsService {
     @InjectRepository(WishlistItem)
     private readonly wishlistRepository: MongoRepository<WishlistItem>,
     private readonly usersService: UsersService,
-    private readonly placesService: PlacesService,
   ) {}
 
   async addToWishlist(userId: string, placeId: string): Promise<WishlistItem> {
