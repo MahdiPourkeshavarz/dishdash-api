@@ -3,25 +3,22 @@ import { Post } from 'src/posts/entity/post.entity';
 import { Entity, ObjectIdColumn, Column, ObjectId, OneToMany } from 'typeorm';
 
 @Entity()
-export class User {
+export class Place {
   @ObjectIdColumn()
   _id: ObjectId;
 
-  @Column()
-  email: string;
+  @Column({ unique: true })
+  osmId: number;
 
   @Column()
-  username: string;
+  name: string;
 
-  @Column()
-  password?: string;
+  @Column('array')
+  position: [number, number];
 
-  @Column({ nullable: true })
-  fullName: string;
+  @Column('simple-json')
+  tags: Record<string, any>;
 
-  @OneToMany(() => Post, (post) => post.user)
+  @OneToMany(() => Post, (post) => post.place)
   posts: Post[];
-
-  @Column({ nullable: true })
-  image: string;
 }
