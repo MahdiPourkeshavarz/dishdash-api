@@ -10,10 +10,12 @@ import {
   Patch,
   Post,
   Request,
+  UseGuards,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @Controller('posts')
 export class PostsController {
@@ -21,7 +23,7 @@ export class PostsController {
 
   @Post()
   create(@Body() createPostDto: CreatePostDto, @Request() req) {
-    const userId = req.user.sub; // Get user ID from the JWT
+    const userId = req.user.sub;
     return this.postsService.create(createPostDto, userId);
   }
 
@@ -35,6 +37,7 @@ export class PostsController {
     return this.postsService.findOne(id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -45,18 +48,21 @@ export class PostsController {
     return this.postsService.update(id, updatePostDto, userId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req) {
     const userId = req.user.sub;
     return this.postsService.remove(id, userId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post(':id/like')
   likePost(@Param('id') id: string, @Request() req) {
     const userId = req.user.sub;
     return this.postsService.like(id, userId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post(':id/dislike')
   dislikePost(@Param('id') id: string, @Request() req) {
     const userId = req.user.sub;
