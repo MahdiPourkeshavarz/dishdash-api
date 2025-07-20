@@ -8,23 +8,32 @@ import {
   Get,
   Param,
   Patch,
-  Post,
+  Post as PostRoute,
   Request,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('posts')
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
-  @Post()
-  create(@Body() createPostDto: CreatePostDto, @Request() req) {
+  @UseGuards(JwtAuthGuard)
+  @PostRoute()
+  @UseInterceptors(FileInterceptor('imageFile'))
+  create(
+    @Body() createPostDto: CreatePostDto,
+    @Request() req,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
     const userId = req.user.sub;
-    return this.postsService.create(createPostDto, userId);
+    return this.postsService.create(createPostDto, userId, file);
   }
 
   @Get()
@@ -56,14 +65,14 @@ export class PostsController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post(':id/like')
+  @PostRoute(':id/like')
   likePost(@Param('id') id: string, @Request() req) {
     const userId = req.user.sub;
     return this.postsService.like(id, userId);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post(':id/dislike')
+  @PostRoute(':id/dislike')
   dislikePost(@Param('id') id: string, @Request() req) {
     const userId = req.user.sub;
     return this.postsService.dislike(id, userId);

@@ -17,10 +17,6 @@ export class CreatePostDto {
   @IsNotEmpty()
   satisfaction: string;
 
-  @IsString()
-  @IsNotEmpty()
-  imageUrl: string;
-
   @IsArray()
   position: [number, number];
 
