@@ -17,4 +17,10 @@ export class UploadsController {
   uploadImage(@UploadedFile() file: Express.Multer.File) {
     return this.uploadsService.saveFile(file);
   }
+
+  @Post('classify')
+  @UseInterceptors(FileInterceptor('file'))
+  classifyImage(@UploadedFile() file: Express.Multer.File) {
+    return this.uploadsService.classifyImage(file);
+  }
 }

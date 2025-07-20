@@ -41,4 +41,7 @@ export class Post {
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
+
+  @Column('array')
+  tags: string[];
 }

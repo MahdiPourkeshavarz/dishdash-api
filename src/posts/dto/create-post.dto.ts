@@ -20,6 +20,10 @@ export class CreatePostDto {
   @IsArray()
   position: [number, number];
 
+  @IsArray()
+  @IsOptional()
+  tags?: string[];
+
   @IsString()
   @IsOptional()
   areaName?: string;
