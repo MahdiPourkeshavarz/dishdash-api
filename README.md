@@ -1,98 +1,107 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# DishDash API 🍔
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+This is the official backend API for the DishDash application, a modern, map-based platform for discovering and sharing food experiences. Built with **NestJS**, **TypeScript**, and **TypeORM**, this API provides a robust, scalable, and secure foundation for both the web and mobile versions of DishDash.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+The architecture is modular, with a clear separation of concerns to ensure the codebase is clean, maintainable, and easy to extend.
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## ✨ Core Features
 
-## Project setup
+- **Secure JWT Authentication**: Handles user sign-in and sign-up with a secure, token-based session system using **Passport.js**.
+- **Modular Architecture**: Code is organized by feature (`Auth`, `Users`, `Posts`, etc.), making the project easy to navigate and scale.
+- **Database Integration**: Uses **TypeORM** to connect to a **MongoDB** database, with clearly defined entities and relationships.
+- **CRUD Operations**: Provides a full suite of API endpoints for managing users, posts, and interactions.
+- **File Uploads**: A dedicated module for handling image uploads (for profiles and posts) to a local storage provider.
+- **Social Interactions**: Includes logic for liking/disliking posts and managing user wishlists.
+- **External API Proxy**: A dedicated service for fetching and caching Point of Interest (POI) data from the **OpenStreetMap Overpass API**.
+- **Validation**: Uses DTOs (Data Transfer Objects) with `class-validator` to ensure all incoming requests are type-safe and have the correct data.
 
-```bash
-$ npm install
+---
+
+## 🛠️ Tech Stack
+
+- **Framework**: [NestJS](https://nestjs.com/)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Database**: [MongoDB](https://www.mongodb.com/) (with [MongoDB Atlas](https://www.mongodb.com/atlas) for cloud hosting)
+- **ORM / ODM**: [TypeORM](https://typeorm.io/)
+- **Authentication**: [Passport.js](http://www.passportjs.org/) with JWT (`passport-jwt`) and Local (`passport-local`) strategies.
+- **Validation**: [class-validator](https://github.com/typestack/class-validator)
+- **File Handling**: [Multer](https://github.com/expressjs/multer) via `@nestjs/platform-express`
+- **Password Hashing**: [bcrypt](https://www.google.com/search?q=https://github.com/kelektiv/node.bcrypt.js)
+
+---
+
+## 🚀 Getting Started
+
+### 1\. Prerequisites
+
+- Node.js (v18 or later)
+- npm, yarn, or pnpm
+- A running MongoDB Atlas cluster
+
+### 2\. Installation
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/MahdiPourkeshavarz/dishdash-api.git
+    cd dishdash-api
+    ```
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+
+### 3\. Environment Configuration
+
+1.  Create a `.env` file in the root of the project.
+
+2.  Add the following required environment variables:
+
+    ```env
+    # The port your NestJS server will run on
+    PORT=3001
+
+    # Your full MongoDB Atlas connection string
+    DATABASE_URL=mongodb+srv://user:password@cluster.mongodb.net/your_db?retryWrites=true&w=majority
+
+    # A long, random string for signing JWTs
+    # Generate one with: openssl rand -base64 32
+    JWT_SECRET=your-super-secret-key-goes-here
+    JWT_ACCESS_TOKEN_EXPIRES_IN=60m
+    ```
+
+### 4\. Running the Application
+
+- **Development mode:**
+  ```bash
+  npm run start:dev
+  ```
+- **Production mode:**
+  ```bash
+  npm run build
+  npm run start:prod
+  ```
+
+The API will be available at `http://localhost:3001`.
+
+---
+
+## 📁 API Structure
+
+The project is organized into self-contained modules for each feature.
+
+```
+/src
+├── auth/           # Handles JWT creation, login/signup, and guards
+├── interactions/   # Manages likes, dislikes, and wishlists
+├── places/         # Fetches POI data from the Overpass API
+├── posts/          # All CRUD logic for posts
+├── uploads/        # Handles image file saving
+├── users/          # Manages user profiles and data
+│
+├── app.module.ts   # The root module of the application
+└── main.ts         # The main entry point of the application
 ```
 
-## Compile and run the project
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Each module typically contains a `controller`, `service`, `module`, and an `entities` sub-folder.
