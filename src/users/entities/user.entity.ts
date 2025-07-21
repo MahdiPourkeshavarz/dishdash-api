@@ -1,4 +1,5 @@
 /* eslint-disable prettier/prettier */
+import { Exclude } from 'class-transformer';
 import { WishlistItem } from 'src/interactions/entity/wishlist.entity';
 import { Post } from 'src/posts/entity/post.entity';
 import { Entity, ObjectIdColumn, Column, ObjectId, OneToMany } from 'typeorm';
@@ -15,6 +16,7 @@ export class User {
   username: string;
 
   @Column()
+  @Exclude()
   password?: string;
 
   @Column({ nullable: true })
@@ -28,4 +30,9 @@ export class User {
 
   @Column({ nullable: true })
   image: string;
+
+  toJSON() {
+    delete this.password;
+    return this;
+  }
 }

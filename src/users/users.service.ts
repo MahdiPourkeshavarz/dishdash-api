@@ -82,4 +82,17 @@ export class UsersService {
       _id: new ObjectId(id),
     });
   }
+
+  async findAll(): Promise<Omit<User, 'password'>[]> {
+    return this.usersRepository.find({
+      select: {
+        _id: true,
+        email: true,
+        username: true,
+        fullName: true,
+        image: true,
+        password: false,
+      },
+    });
+  }
 }
