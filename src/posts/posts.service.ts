@@ -1,4 +1,6 @@
 /* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -9,13 +11,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MongoRepository } from 'typeorm';
+import { FindManyOptions, MongoRepository } from 'typeorm';
 import { Post } from './entity/post.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { ObjectId } from 'mongodb';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { Interaction } from 'src/interactions/entity/interaction.entity';
 import { UploadsService } from 'src/uploads/uploads.service';
+import { BboxDto } from 'src/places/dto/bbox.dto';
 
 @Injectable()
 export class PostsService {
@@ -25,7 +28,6 @@ export class PostsService {
     private readonly postsRepository: MongoRepository<Post>,
     @InjectRepository(Interaction)
     private readonly interactionsRepository: MongoRepository<Interaction>,
-    // private readonly placesService: PlacesService,
   ) {}
 
   async create(
@@ -54,8 +56,56 @@ export class PostsService {
     return this.postsRepository.save(newPost);
   }
 
-  async findAll(): Promise<Post[]> {
-    return this.postsRepository.find({ relations: ['user'] });
+  async findAll(bbox?: BboxDto, userId?: string): Promise<Post[]> {
+    const matchStage: any = {};
+
+    if (bbox) {
+      const { sw_lat, sw_lng, ne_lat, ne_lng } = bbox;
+      matchStage.position = {
+        $geoWithin: {
+          $box: [
+            [parseFloat(sw_lng), parseFloat(sw_lat)],
+            [parseFloat(ne_lng), parseFloat(ne_lat)],
+          ],
+        },
+      };
+    }
+
+    if (userId) {
+      matchStage.userId = { $ne: userId };
+    }
+
+    const aggregationPipeline: any[] = [];
+    if (Object.keys(matchStage).length > 0) {
+      aggregationPipeline.push({ $match: matchStage });
+    }
+
+    aggregationPipeline.push(
+      {
+        $lookup: {
+          from: 'user',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: '$user' },
+    );
+
+    const otherUsersPosts = await this.postsRepository
+      .aggregate(aggregationPipeline)
+      .toArray();
+
+    if (!userId) {
+      return otherUsersPosts;
+    }
+
+    const currentUserPosts = await this.postsRepository.find({
+      where: { userId },
+      relations: ['user'],
+    });
+
+    return [...currentUserPosts, ...otherUsersPosts];
   }
 
   async findOne(id: string): Promise<Post> {
