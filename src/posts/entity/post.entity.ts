@@ -43,5 +43,5 @@ export class Post {
   createdAt: Date;
 
   @Column('array')
-  tags: string[];
+  tags?: string[];
 }

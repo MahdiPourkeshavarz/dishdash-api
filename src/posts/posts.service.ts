@@ -38,10 +38,14 @@ export class PostsService {
     }
 
     const { url: imageUrl } = await this.uploadsService.saveFile(file);
+    const parsedPosition = JSON.parse(createPostDto.position);
+    const parsedTags = createPostDto.tags ? JSON.parse(createPostDto.tags) : [];
 
     const newPost = this.postsRepository.create({
       ...createPostDto,
       imageUrl,
+      position: parsedPosition,
+      tags: parsedTags,
       userId,
       likes: 0,
       dislikes: 0,

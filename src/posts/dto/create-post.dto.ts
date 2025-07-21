@@ -1,12 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable prettier/prettier */
-import {
-  IsString,
-  IsNotEmpty,
-  IsArray,
-  IsOptional,
-  IsNumber,
-} from 'class-validator';
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+import { IsString, IsNotEmpty, IsOptional, IsNumber } from 'class-validator';
 
 export class CreatePostDto {
   @IsString()
@@ -17,12 +12,13 @@ export class CreatePostDto {
   @IsNotEmpty()
   satisfaction: string;
 
-  @IsArray()
-  position: [number, number];
+  @IsString()
+  @IsNotEmpty()
+  position: string;
 
-  @IsArray()
+  @IsString()
   @IsOptional()
-  tags?: string[];
+  tags?: string;
 
   @IsString()
   @IsOptional()
