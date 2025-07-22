@@ -12,6 +12,7 @@ import { ConfigService } from '@nestjs/config';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import * as sharp from 'sharp';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class UploadsService {
@@ -23,12 +24,16 @@ export class UploadsService {
 
     try {
       const uploadPath = join(process.cwd(), 'uploads');
-      const uniqueFilename = `${Date.now()}-${file.originalname}`;
+      const extension = file.mimetype.split('/')[1] || 'jpg';
+      const uniqueFilename = `${uuidv4()}.${extension}`;
       await writeFile(join(uploadPath, uniqueFilename), file.buffer);
 
-      const url = `/uploads/${uniqueFilename}`;
+      const baseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
+      const url = `${baseUrl}/uploads/${uniqueFilename}`;
+      console.log('Saved file URL:', url);
       return { url };
     } catch (error) {
+      console.error('Error saving file:', error);
       throw new InternalServerErrorException('Failed to save file');
     }
   }

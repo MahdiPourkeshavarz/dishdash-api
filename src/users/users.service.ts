@@ -47,29 +47,37 @@ export class UsersService {
       throw new NotFoundException(`User with ID "${id}" not found`);
     }
 
-    if (file) {
-      const oldImageUrl = user.image;
-      const { url: newImageUrl } = await this.uploadsService.saveFile(file);
-      user.image = newImageUrl;
+    const updateData: Partial<User> = {};
+    if (updateUserDto.username) {
+      updateData.username = updateUserDto.username;
+    }
 
-      if (oldImageUrl) {
+    if (file) {
+      console.log('Processing file:', file.originalname, file.mimetype);
+      const { url: newImageUrl } = await this.uploadsService.saveFile(file);
+      console.log('New image URL:', newImageUrl);
+      updateData.image = newImageUrl;
+      const baseUrl = 'http://localhost:8000';
+
+      if (user.image && user.image !== newImageUrl) {
         try {
-          const oldImageFilename = oldImageUrl.split('/').pop();
+          const oldImageFilename = user.image.split('/').pop();
           if (oldImageFilename) {
-            await fs.unlink(join(process.cwd(), 'uploads', oldImageFilename));
+            await fs.unlink(join(baseUrl, 'Uploads', oldImageFilename));
           }
         } catch (error) {
           console.error(
-            `Failed to delete old profile picture: ${oldImageUrl}`,
+            `Failed to delete old profile picture: ${user.image}`,
             error,
           );
         }
       }
     }
 
-    Object.assign(user, updateUserDto);
-
-    return this.usersRepository.save(user);
+    await this.usersRepository.update(id, updateData);
+    const updatedUser = await this.findById(id);
+    console.log('Updated user:', updatedUser);
+    return updatedUser as User;
   }
 
   async findById(id: string): Promise<User | null> {

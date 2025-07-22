@@ -29,7 +29,7 @@ export class User {
   wishlistItems: WishlistItem[];
 
   @Column({ nullable: true })
-  image: string;
+  image: string | null;
 
   toJSON() {
     delete this.password;
