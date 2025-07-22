@@ -6,6 +6,7 @@ import { WishlistItem } from './entity/wishlist.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MongoRepository } from 'typeorm';
 import { UsersService } from 'src/users/users.service';
+import { PlacesService } from 'src/places/places.service';
 
 @Injectable()
 export class InteractionsService {
@@ -13,6 +14,7 @@ export class InteractionsService {
     @InjectRepository(WishlistItem)
     private readonly wishlistRepository: MongoRepository<WishlistItem>,
     private readonly usersService: UsersService,
+    private readonly placesService: PlacesService,
   ) {}
 
   async addToWishlist(userId: string, placeId: string): Promise<WishlistItem> {
@@ -27,6 +29,12 @@ export class InteractionsService {
     const user = await this.usersService.findById(userId);
     if (!user) {
       throw new NotFoundException(`User with ID "${userId}" not found`);
+    }
+
+    // ✅ 3. Verify that the place exists before saving
+    const place = await this.placesService.findById(placeId);
+    if (!place) {
+      throw new NotFoundException(`Place with ID "${placeId}" not found`);
     }
 
     const newWishlistItem = this.wishlistRepository.create({ userId, placeId });
