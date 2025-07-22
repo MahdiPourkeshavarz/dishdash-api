@@ -53,12 +53,21 @@ export class AuthService {
 
   private login(user: User) {
     const payload = {
-      sub: user._id,
+      sub: user._id.toHexString(),
       email: user.email,
       username: user.username,
     };
 
+    const userForResponse = {
+      _id: user._id.toHexString(),
+      email: user.email,
+      username: user.username,
+      fullName: user.fullName,
+      image: user.image,
+    };
+
     return {
+      user: userForResponse,
       access_token: this.jwtService.sign(payload),
     };
   }
