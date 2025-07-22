@@ -44,4 +44,10 @@ export class UsersController {
   findOne(@Param('id') id: string) {
     return this.usersService.findById(id);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  findAll() {
+    return this.usersService.findAll();
+  }
 }

@@ -4,9 +4,25 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable } from '@nestjs/common';
 import { BboxDto } from './dto/bbox.dto';
+import { Place } from './entity/place.entity';
+import { MongoRepository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { ObjectId } from 'mongodb';
 
 @Injectable()
 export class PlacesService {
+  constructor(
+    @InjectRepository(Place)
+    private readonly placesRepository: MongoRepository<Place>,
+  ) {}
+
+  async findById(id: string): Promise<Place | null> {
+    if (!ObjectId.isValid(id)) {
+      return null;
+    }
+    return this.placesRepository.findOneBy({ _id: new ObjectId(id) });
+  }
+
   async findInBounds(bboxDto: BboxDto) {
     const { sw_lat, sw_lng, ne_lat, ne_lng } = bboxDto;
     const bboxString = `${sw_lat},${sw_lng},${ne_lat},${ne_lng}`;

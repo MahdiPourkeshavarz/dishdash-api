@@ -9,6 +9,11 @@ export class AuthController {
 
   @Post('login')
   signIn(@Body() authDto: AuthDto) {
-    return this.authService.signUpAndLogin(authDto.email, authDto.password);
+    return this.authService.signIn(authDto.email, authDto.password);
+  }
+
+  @Post('register')
+  signUp(@Body() authDto: AuthDto) {
+    return this.authService.signUp(authDto);
   }
 }
