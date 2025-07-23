@@ -85,6 +85,26 @@ export class PlacesService {
     }
   }
 
+  async findOrCreateByOsmId(placeData: any): Promise<Place> {
+    const existingPlace = await this.placesRepository.findOneBy({
+      osmId: placeData.osmId,
+    });
+
+    if (existingPlace) {
+      return existingPlace;
+    }
+
+    const newPlaceData = {
+      osmId: placeData.osmId,
+      position: placeData.position,
+      tags: placeData.tags,
+    };
+
+    const newPlace = this.placesRepository.create(newPlaceData);
+
+    return this.placesRepository.save(newPlace);
+  }
+
   async seedDatabase() {
     const query = `
       [out:json][timeout:25];

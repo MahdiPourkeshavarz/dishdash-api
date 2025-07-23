@@ -1,6 +1,13 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import { Entity, ObjectIdColumn, Column, ObjectId, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  ObjectIdColumn,
+  Column,
+  ObjectId,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Place } from 'src/places/entity/place.entity';
 
@@ -34,9 +41,11 @@ export class Post {
   userId: string;
 
   @ManyToOne(() => User, (user) => user.posts)
+  @JoinColumn({ name: 'userId', referencedColumnName: '_id' })
   user: User;
 
   @ManyToOne(() => Place, (place) => place.posts, { nullable: true })
+  @JoinColumn({ name: 'placeId', referencedColumnName: '_id' })
   place: Place;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
