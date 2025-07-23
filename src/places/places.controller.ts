@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Post, Query } from '@nestjs/common';
 import { PlacesService } from './places.service';
 import { BboxDto } from './dto/bbox.dto';
 
@@ -10,5 +10,10 @@ export class PlacesController {
   @Get()
   findInBounds(@Query() bboxDto: BboxDto) {
     return this.placesService.findInBounds(bboxDto);
+  }
+
+  @Post('seed')
+  seedDatabase() {
+    return this.placesService.seedDatabase();
   }
 }

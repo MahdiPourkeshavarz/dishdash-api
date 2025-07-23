@@ -23,10 +23,7 @@ export class Place {
   osmId: number;
 
   @Column()
-  lat: number;
-
-  @Column()
-  lon: number;
+  position: [number, number];
 
   @Column('simple-json')
   tags: PlaceTags;
