@@ -3,6 +3,17 @@ import { WishlistItem } from 'src/interactions/entity/wishlist.entity';
 import { Post } from 'src/posts/entity/post.entity';
 import { Entity, ObjectIdColumn, Column, ObjectId, OneToMany } from 'typeorm';
 
+interface PlaceTags {
+  [key: string]: string | undefined;
+  name?: string;
+  amenity?: string;
+  cuisine?: string;
+  phone?: string;
+  website?: string;
+  opening_hours?: string;
+  'addr:street'?: string;
+}
+
 @Entity()
 export class Place {
   @ObjectIdColumn()
@@ -12,13 +23,13 @@ export class Place {
   osmId: number;
 
   @Column()
-  name: string;
+  lat: number;
 
-  @Column('array')
-  position: [number, number];
+  @Column()
+  lon: number;
 
   @Column('simple-json')
-  tags: Record<string, any>;
+  tags: PlaceTags;
 
   @OneToMany(() => Post, (post) => post.place)
   posts: Post[];

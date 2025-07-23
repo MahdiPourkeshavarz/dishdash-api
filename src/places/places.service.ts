@@ -1,4 +1,5 @@
 /* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -51,4 +52,56 @@ export class PlacesService {
     const data = await response.json();
     return data.elements;
   }
+
+  // async seedDatabase() {
+  //   const query = `
+  //     [out:json][timeout:25];
+  //     (
+  //       node["amenity"~"restaurant|cafe|fast_food"](35.523976839685545, 51.14867584729524, 35.82007768096656, 51.60838554062815);
+  //     );
+  //     out body;
+  //     >;
+  //     out skel qt;
+  //   `;
+
+  //   try {
+  //     const response = await fetch('https://overpass-api.de/api/interpreter', {
+  //       method: 'POST',
+  //       body: `data=${encodeURIComponent(query)}`,
+  //     });
+
+  //     if (!response.ok) {
+  //       throw new Error(`Overpass API failed with status: ${response.status}`);
+  //     }
+
+  //     const data = await response.json();
+  //     const pois: Poi[] = data.elements;
+
+  //     if (!pois || pois.length === 0) {
+  //       return { message: 'No places found to add.' };
+  //     }
+
+  //     const placesToInsert = pois
+  //       .filter((poi) => poi.id && poi.tags?.name)
+  //       .map((poi) => ({
+  //         osmId: poi.id,
+  //         name: poi.tags.name,
+  //         lat: poi.lat,
+  //         lon: poi.lon,
+  //         tags: poi.tags,
+  //       }));
+
+  //     const result = await this.placesRepository.insert(placesToInsert);
+
+  //     return {
+  //       message: 'Database seeded successfully!',
+  //       count: result.raw.insertedCount,
+  //     };
+  //   } catch (error) {
+  //     console.error('Seeding failed:', error);
+  //     throw new InternalServerErrorException(
+  //       'Failed to seed the database. The places might already exist.',
+  //     );
+  //   }
+  // }
 }
