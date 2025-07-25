@@ -22,7 +22,7 @@ export class Post {
   @Column()
   imageUrl: string;
 
-  @Column('array')
+  @Column()
   position: [number, number];
 
   @Column({ nullable: true })

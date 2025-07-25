@@ -105,6 +105,10 @@ export class PlacesService {
     return this.placesRepository.save(newPlace);
   }
 
+  async findOneByOsmId(osmId: number): Promise<Place | null> {
+    return this.placesRepository.findOneBy({ osmId });
+  }
+
   async seedDatabase() {
     const query = `
       [out:json][timeout:25];

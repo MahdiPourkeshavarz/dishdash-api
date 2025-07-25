@@ -1,4 +1,5 @@
 /* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
@@ -42,7 +43,7 @@ export class PostsController {
   findAll(@Query() bboxDto: BboxDto, @Request() req) {
     const userId = req.user?.sub;
     const hasBbox = Object.keys(bboxDto).length > 0;
-    return this.postsService.findAll(hasBbox ? bboxDto : undefined, userId);
+    return this.postsService.findAll(hasBbox ? bboxDto : undefined);
   }
 
   @Get(':id')

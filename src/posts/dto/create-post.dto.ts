@@ -1,6 +1,7 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
+import { Type } from 'class-transformer';
 import { IsString, IsNotEmpty, IsOptional, IsNumber } from 'class-validator';
 
 export class CreatePostDto {
@@ -24,6 +25,7 @@ export class CreatePostDto {
   @IsOptional()
   areaName?: string;
 
+  @Type(() => Number)
   @IsNumber()
   @IsOptional()
   osmId?: number;

@@ -19,6 +19,7 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { Interaction } from 'src/interactions/entity/interaction.entity';
 import { UploadsService } from 'src/uploads/uploads.service';
 import { BboxDto } from 'src/places/dto/bbox.dto';
+import { PlacesService } from 'src/places/places.service';
 
 @Injectable()
 export class PostsService {
@@ -28,6 +29,7 @@ export class PostsService {
     private readonly postsRepository: MongoRepository<Post>,
     @InjectRepository(Interaction)
     private readonly interactionsRepository: MongoRepository<Interaction>,
+    private readonly placesService: PlacesService,
   ) {}
 
   async create(
@@ -35,77 +37,69 @@ export class PostsService {
     userId: string,
     file: Express.Multer.File,
   ): Promise<Post> {
-    if (!file) {
-      throw new InternalServerErrorException('Post image is required.');
-    }
-
     const { url: imageUrl } = await this.uploadsService.saveFile(file);
     const parsedPosition = JSON.parse(createPostDto.position);
-    const parsedTags = createPostDto.tags ? JSON.parse(createPostDto.tags) : [];
+
+    let placeId: string | undefined = undefined;
+    if (createPostDto.osmId) {
+      const place = await this.placesService.findOneByOsmId(
+        createPostDto.osmId,
+      );
+      if (place) {
+        placeId = place._id.toHexString();
+      }
+    }
 
     const newPost = this.postsRepository.create({
-      ...createPostDto,
+      description: createPostDto.description,
+      satisfaction: createPostDto.satisfaction,
+      areaName: createPostDto.areaName,
       imageUrl,
       position: parsedPosition,
-      tags: parsedTags,
       userId,
+      place: placeId ? { _id: new ObjectId(placeId) } : undefined,
       likes: 0,
       dislikes: 0,
     });
 
-    return this.postsRepository.save(newPost);
-  }
+    const savedPost = await this.postsRepository.save(newPost);
 
-  async findAll(bbox?: BboxDto, userId?: string): Promise<Post[]> {
-    const matchStage: any = {};
-
-    if (bbox) {
-      const { sw_lat, sw_lng, ne_lat, ne_lng } = bbox;
-      matchStage.position = {
-        $geoWithin: {
-          $box: [
-            [parseFloat(sw_lng), parseFloat(sw_lat)],
-            [parseFloat(ne_lng), parseFloat(ne_lat)],
-          ],
-        },
-      };
-    }
-
-    if (userId) {
-      matchStage.userId = { $ne: userId };
-    }
-
-    const aggregationPipeline: any[] = [];
-    if (Object.keys(matchStage).length > 0) {
-      aggregationPipeline.push({ $match: matchStage });
-    }
-
-    aggregationPipeline.push(
-      {
-        $lookup: {
-          from: 'user',
-          localField: 'userId',
-          foreignField: '_id',
-          as: 'user',
-        },
-      },
-      { $unwind: '$user' },
-    );
-
-    const otherUsersPosts = await this.postsRepository
-      .aggregate(aggregationPipeline)
-      .toArray();
-
-    if (!userId) {
-      return otherUsersPosts;
-    }
-
-    const currentUserPosts = await this.postsRepository.find({
-      where: { userId },
-      relations: ['user'],
+    const populatedPost = await this.postsRepository.findOne({
+      where: { _id: savedPost._id },
+      relations: ['user', 'place'],
     });
 
-    return [...currentUserPosts, ...otherUsersPosts];
+    if (!populatedPost) {
+      throw new InternalServerErrorException(
+        'Could not retrieve the created post.',
+      );
+    }
+
+    return populatedPost;
+  }
+
+  async findAll(bbox?: BboxDto): Promise<Post[]> {
+    if (!bbox) {
+      return this.postsRepository.find({
+        relations: ['user', 'place'],
+      });
+    }
+
+    const { sw_lat, sw_lng, ne_lat, ne_lng } = bbox;
+
+    return this.postsRepository.find({
+      where: {
+        position: {
+          $geoWithin: {
+            $box: [
+              [parseFloat(sw_lng), parseFloat(sw_lat)],
+              [parseFloat(ne_lng), parseFloat(ne_lat)],
+            ],
+          },
+        },
+      },
+      relations: ['user', 'place'],
+    });
   }
 
   async findOne(id: string): Promise<Post> {
