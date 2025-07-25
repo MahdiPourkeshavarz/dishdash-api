@@ -28,7 +28,7 @@ export class UploadsService {
       const uniqueFilename = `${uuidv4()}.${extension}`;
       await writeFile(join(uploadPath, uniqueFilename), file.buffer);
 
-      const baseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
+      const baseUrl = process.env.API_BASE_URL || 'http://localhost:8000';
       const url = `${baseUrl}/uploads/${uniqueFilename}`;
       console.log('Saved file URL:', url);
       return { url };

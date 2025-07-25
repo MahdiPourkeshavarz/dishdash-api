@@ -12,6 +12,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { User } from './users/entities/user.entity';
+import { Post } from './posts/entity/post.entity';
+import { Place } from './places/entity/place.entity';
+import { WishlistItem } from './interactions/entity/wishlist.entity';
+import { Interaction } from './interactions/entity/interaction.entity';
 
 @Module({
   imports: [
@@ -23,8 +28,10 @@ import { join } from 'path';
       useFactory: (configService: ConfigService) => ({
         type: 'mongodb',
         url: configService.get('DATABASE_URL'),
+        entities: [User, Post, Place, WishlistItem, Interaction],
         synchronize: true,
         autoLoadEntities: true,
+        logging: true,
       }),
     }),
     ServeStaticModule.forRoot({
