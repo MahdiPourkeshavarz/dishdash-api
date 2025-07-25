@@ -1,7 +1,11 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { MongoRepository } from 'typeorm';
@@ -12,6 +16,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UploadsService } from 'src/uploads/uploads.service';
 import { promises as fs } from 'fs';
 import { join } from 'path';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class UsersService {
@@ -101,5 +106,31 @@ export class UsersService {
         password: false,
       },
     });
+  }
+
+  async changePassword(
+    userId: string,
+    changePasswordDto: ChangePasswordDto,
+  ): Promise<void> {
+    const user = await this.findById(userId);
+    if (!user || !user.password) {
+      throw new NotFoundException('User not found or password not set.');
+    }
+
+    const isPasswordCorrect = await bcrypt.compare(
+      changePasswordDto.currentPassword,
+      user.password,
+    );
+
+    if (!isPasswordCorrect) {
+      throw new BadRequestException('Incorrect current password.');
+    }
+
+    const hashedNewPassword = await bcrypt.hash(
+      changePasswordDto.newPassword,
+      10,
+    );
+
+    await this.usersRepository.update(userId, { password: hashedNewPassword });
   }
 }
