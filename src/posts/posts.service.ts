@@ -50,6 +50,8 @@ export class PostsService {
       }
     }
 
+    const parsedTags = createPostDto.tags ? JSON.parse(createPostDto.tags) : [];
+
     const newPost = this.postsRepository.create({
       description: createPostDto.description,
       satisfaction: createPostDto.satisfaction,
@@ -58,6 +60,7 @@ export class PostsService {
       position: parsedPosition,
       userId,
       place: placeId ? { _id: new ObjectId(placeId) } : undefined,
+      tags: parsedTags,
       likes: 0,
       dislikes: 0,
     });
@@ -122,14 +125,33 @@ export class PostsService {
     updatePostDto: UpdatePostDto,
     userId: string,
   ): Promise<Post> {
-    const post = await this.findOne(id);
+    const post = await this.postsRepository.findOne({
+      where: { _id: new ObjectId(id) },
+    });
 
+    if (!post) {
+      throw new NotFoundException(`Post with ID "${id}" not found`);
+    }
     if (post.userId.toString() !== userId) {
       throw new ForbiddenException('You are not allowed to edit this post.');
     }
 
     Object.assign(post, updatePostDto);
-    return this.postsRepository.save(post);
+
+    await this.postsRepository.save(post);
+
+    const updatedAndPopulatedPost = await this.postsRepository.findOne({
+      where: { _id: new ObjectId(id) },
+      relations: ['user', 'place'],
+    });
+
+    if (!updatedAndPopulatedPost) {
+      throw new InternalServerErrorException(
+        'Could not retrieve updated post.',
+      );
+    }
+
+    return updatedAndPopulatedPost;
   }
 
   async remove(id: string, userId: string): Promise<void> {
