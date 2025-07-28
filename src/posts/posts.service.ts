@@ -6,6 +6,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   ForbiddenException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -20,6 +21,8 @@ import { Interaction } from 'src/interactions/entity/interaction.entity';
 import { UploadsService } from 'src/uploads/uploads.service';
 import { BboxDto } from 'src/places/dto/bbox.dto';
 import { PlacesService } from 'src/places/places.service';
+import { ConfigService } from '@nestjs/config';
+import { Place } from 'src/places/entity/place.entity';
 
 @Injectable()
 export class PostsService {
@@ -31,6 +34,53 @@ export class PostsService {
     private readonly interactionsRepository: MongoRepository<Interaction>,
     private readonly placesService: PlacesService,
   ) {}
+  private _buildSearchEmbeddingText(
+    createPostDto: CreatePostDto,
+    place: Place | null,
+  ): string {
+    const satisfactionFarsiMap = {
+      awesome: 'عالی و خوشمزه',
+      good: 'خوب',
+      bad: 'بد',
+      disgusted: 'افتضاح',
+    };
+    const amenityFarsiMap = {
+      restaurant: 'رستوران',
+      cafe: 'کافه',
+      fast_food: 'فست فود',
+    };
+    const tagFarsiMap: { [key: string]: string } = {
+      pizza: 'پیتزا',
+      hamburger: 'همبرگر',
+      kebab: 'کباب',
+      food: 'غذا',
+      plate: 'بشقاب',
+    };
+
+    const placeName = place?.name || createPostDto.areaName || 'a location';
+    const amenity = place?.tags?.amenity;
+    const parsedTags = createPostDto.tags ? JSON.parse(createPostDto.tags) : [];
+    const satisfaction = createPostDto.satisfaction;
+    const description = createPostDto.description;
+
+    const englishText =
+      `A user review with a satisfaction level of '${satisfaction}'. The review is for the place: "${placeName}"${amenity ? `, which is a ${amenity}` : ''}. The user's description says: "${description}". ${parsedTags.length > 0 ? `Visual tags from the image are: ${parsedTags.join(', ')}.` : ''}`
+        .trim()
+        .replace(/\s\s+/g, ' ');
+
+    const translatedFarsiTags = parsedTags.map(
+      (tag) => tagFarsiMap[tag.toLowerCase()] || tag,
+    );
+    const farsiSatisfaction =
+      satisfactionFarsiMap[satisfaction] || satisfaction;
+    const farsiAmenity = amenity ? amenityFarsiMap[amenity] || amenity : '';
+    const farsiText =
+      `یک نظر کاربر با سطح رضایت '${farsiSatisfaction}'. این نظر برای مکان "${placeName}" است${farsiAmenity ? `، که یک ${farsiAmenity} میباشد` : ''}. توضیحات کاربر: "${description}". ${translatedFarsiTags.length > 0 ? `برچسب‌های بصری از تصویر: ${translatedFarsiTags.join('، ')}.` : ''}`
+        .trim()
+        .replace(/\s\s+/g, ' ');
+
+    return `${englishText} || ${farsiText}`;
+  }
 
   async create(
     createPostDto: CreatePostDto,
@@ -41,16 +91,19 @@ export class PostsService {
     const parsedPosition = JSON.parse(createPostDto.position);
 
     let placeId: string | undefined = undefined;
+    let place: Place | null = null;
     if (createPostDto.osmId) {
-      const place = await this.placesService.findOneByOsmId(
-        createPostDto.osmId,
-      );
+      place = await this.placesService.findOneByOsmId(createPostDto.osmId);
       if (place) {
         placeId = place._id.toHexString();
       }
     }
 
     const parsedTags = createPostDto.tags ? JSON.parse(createPostDto.tags) : [];
+
+    const textToEmbed = this._buildSearchEmbeddingText(createPostDto, place);
+
+    const embedding = await this.uploadsService.generateEmbedding(textToEmbed);
 
     const newPost = this.postsRepository.create({
       description: createPostDto.description,
@@ -63,6 +116,7 @@ export class PostsService {
       tags: parsedTags,
       likes: 0,
       dislikes: 0,
+      search_embedding: embedding,
     });
 
     const savedPost = await this.postsRepository.save(newPost);

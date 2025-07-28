@@ -17,6 +17,7 @@ import { Post } from './posts/entity/post.entity';
 import { Place } from './places/entity/place.entity';
 import { WishlistItem } from './interactions/entity/wishlist.entity';
 import { Interaction } from './interactions/entity/interaction.entity';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { Interaction } from './interactions/entity/interaction.entity';
     UploadsModule,
     InteractionsModule,
     PlacesModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [AppService],
