@@ -133,4 +133,8 @@ export class UsersService {
 
     await this.usersRepository.update(userId, { password: hashedNewPassword });
   }
+
+  async setRefreshToken(userId: string, refreshToken: string) {
+    await this.usersRepository.update(userId, { refreshToken });
+  }
 }

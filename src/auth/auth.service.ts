@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -11,12 +12,14 @@ import { UsersService } from 'src/users/users.service';
 import * as bcrypt from 'bcrypt';
 import { User } from 'src/users/entities/user.entity';
 import { AuthDto } from './dto/auth.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
   async signUp(dto: AuthDto) {
@@ -51,12 +54,38 @@ export class AuthService {
     return this.login(user);
   }
 
-  private login(user: User) {
-    const payload = {
-      sub: user._id.toHexString(),
-      email: user.email,
-      username: user.username,
+  private async getTokens(userId: string, email: string, username: string) {
+    const payload = { sub: userId, email, username };
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get('JWT_ACCESS_TOKEN_SECRET'),
+        expiresIn: '59m',
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get('JWT_REFRESH_TOKEN_SECRET'),
+        expiresIn: '15d',
+      }),
+    ]);
+
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
     };
+  }
+
+  private async updateRefreshToken(userId: string, refreshToken: string) {
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    await this.usersService.setRefreshToken(userId, hashedRefreshToken);
+  }
+
+  private async login(user: User) {
+    const tokens = await this.getTokens(
+      user._id.toHexString(),
+      user.email,
+      user.username,
+    );
+    await this.updateRefreshToken(user._id.toHexString(), tokens.refresh_token);
 
     const userForResponse = {
       _id: user._id.toHexString(),
@@ -68,7 +97,31 @@ export class AuthService {
 
     return {
       user: userForResponse,
-      access_token: this.jwtService.sign(payload),
+      ...tokens,
     };
+  }
+
+  async refreshToken(userId: string, refreshToken: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user || !user.refreshToken) {
+      throw new ForbiddenException('Access Denied');
+    }
+
+    const isRefreshTokenMatching = await bcrypt.compare(
+      refreshToken,
+      user.refreshToken,
+    );
+
+    if (!isRefreshTokenMatching) {
+      throw new ForbiddenException('Access Denied');
+    }
+
+    const tokens = await this.getTokens(
+      user._id.toHexString(),
+      user.email,
+      user.username,
+    );
+    await this.updateRefreshToken(user._id.toHexString(), tokens.refresh_token);
+    return tokens;
   }
 }
