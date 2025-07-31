@@ -10,6 +10,6 @@ import { PostsModule } from 'src/posts/posts.module';
   imports: [TypeOrmModule.forFeature([Place]), forwardRef(() => PostsModule)],
   controllers: [PlacesController],
   providers: [PlacesService],
-  exports: [PlacesService],
+  exports: [PlacesService, TypeOrmModule.forFeature([Place])],
 })
 export class PlacesModule {}

@@ -16,5 +16,6 @@ import { PlacesModule } from 'src/places/places.module';
   ],
   controllers: [PostsController],
   providers: [PostsService],
+  exports: [TypeOrmModule.forFeature([Post]), PostsService],
 })
 export class PostsModule {}

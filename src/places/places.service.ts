@@ -57,17 +57,9 @@ export class PlacesService {
         },
       });
     } else {
-      console.log('Fetching places from Overpass API...');
+      console.log('Fetching places from Overpass API and updating DB...');
       const bboxString = `${sw_lat},${sw_lng},${ne_lat},${ne_lng}`;
-      const query = `
-        [out:json][timeout:25];
-        (
-          node["amenity"~"restaurant|cafe|fast_food"](${bboxString});
-        );
-        out body;
-        >;
-        out skel qt;
-      `;
+      const query = `[out:json][timeout:25];(node["amenity"~"restaurant|cafe|fast_food"](${bboxString}););out body;>;out skel qt;`;
 
       const response = await fetch('https://overpass-api.de/api/interpreter', {
         method: 'POST',
@@ -76,12 +68,33 @@ export class PlacesService {
 
       if (!response.ok) {
         throw new Error(
-          `Failed to fetch data from Overpass API. Status: ${response.status}`,
+          `Failed to fetch from Overpass API: ${response.status}`,
+        );
+      }
+      const data = await response.json();
+      const pois: any[] = data.elements;
+
+      if (pois && pois.length > 0) {
+        const placesToProcess = pois
+          .map((poi) => {
+            if (!poi || !poi.id || !poi.tags) return null;
+            return {
+              osmId: poi.id,
+              name: poi.tags.name,
+              position: [poi.lon, poi.lat],
+              tags: poi.tags,
+            };
+          })
+          .filter(Boolean);
+
+        await Promise.all(
+          placesToProcess.map((placeData) =>
+            this.findOrCreateByOsmId(placeData),
+          ),
         );
       }
 
-      const data = await response.json();
-      return data.elements;
+      return pois;
     }
   }
 
@@ -96,6 +109,7 @@ export class PlacesService {
 
     const newPlaceData = {
       osmId: placeData.osmId,
+      name: placeData.tags.name || placeData.name,
       position: placeData.position,
       tags: placeData.tags,
     };
