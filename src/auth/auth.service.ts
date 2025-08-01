@@ -104,6 +104,9 @@ export class AuthService {
   async refreshToken(userId: string, refreshToken: string) {
     const user = await this.usersService.findById(userId);
     if (!user || !user.refreshToken) {
+      console.error(
+        `Refresh attempt for user ${userId}, but no user or stored token found.`,
+      );
       throw new ForbiddenException('Access Denied');
     }
 
@@ -121,7 +124,9 @@ export class AuthService {
       user.email,
       user.username,
     );
+
     await this.updateRefreshToken(user._id.toHexString(), tokens.refresh_token);
+
     return tokens;
   }
 }
