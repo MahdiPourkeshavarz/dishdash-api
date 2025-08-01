@@ -1,4 +1,5 @@
 /* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -118,5 +119,47 @@ export class UploadsService {
       }
       throw error;
     }
+  }
+
+  async generateEmbedding(text: string): Promise<number[]> {
+    const apiToken = this.configService.get('HUGGING_FACE_API_TOKEN');
+    const apiUrl =
+      'https://api-inference.huggingface.co/models/intfloat/multilingual-e5-large';
+    const inputText = `passage: ${text}`;
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputs: inputText,
+        options: { wait_for_model: true },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Hugging Face API Error:', errorText);
+      throw new HttpException(
+        `Hugging Face API error: ${errorText}`,
+        response.status,
+      );
+    }
+
+    const result = await response.json();
+
+    if (Array.isArray(result) && Array.isArray(result[0])) {
+      return result[0];
+    }
+    if (Array.isArray(result) && typeof result[0] === 'number') {
+      return result;
+    }
+
+    console.error('Unexpected embedding format from API:', result);
+    throw new InternalServerErrorException(
+      'Unexpected embedding format from API.',
+    );
   }
 }

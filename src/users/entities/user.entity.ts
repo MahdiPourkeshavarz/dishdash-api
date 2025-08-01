@@ -9,6 +9,10 @@ export class User {
   @ObjectIdColumn()
   _id: ObjectId;
 
+  @Column({ nullable: true })
+  @Exclude()
+  refreshToken?: string;
+
   @Column()
   email: string;
 

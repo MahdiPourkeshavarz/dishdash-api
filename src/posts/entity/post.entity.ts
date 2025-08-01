@@ -7,6 +7,7 @@ import {
   ObjectId,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Place } from 'src/places/entity/place.entity';
@@ -48,9 +49,12 @@ export class Post {
   @JoinColumn({ name: 'placeId', referencedColumnName: '_id' })
   place: Place;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @CreateDateColumn()
   createdAt: Date;
 
   @Column('array')
   tags?: string[];
+
+  @Column('double', { array: true, nullable: true })
+  search_embedding?: number[];
 }
