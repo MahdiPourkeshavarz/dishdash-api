@@ -1,6 +1,5 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { WishlistItem } from 'src/interactions/entity/wishlist.entity';
 import { Post } from 'src/posts/entity/post.entity';
 import { Entity, ObjectIdColumn, Column, ObjectId, OneToMany } from 'typeorm';
 
@@ -34,7 +33,4 @@ export class Place {
 
   @OneToMany(() => Post, (post) => post.place)
   posts: Post[];
-
-  @OneToMany(() => WishlistItem, (wishlistItem) => wishlistItem.place)
-  wishlistedBy: WishlistItem[];
 }

@@ -9,7 +9,6 @@ import {
   JoinColumn,
   CreateDateColumn,
 } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
 import { Place } from 'src/places/entity/place.entity';
 
 @Entity()
@@ -40,10 +39,6 @@ export class Post {
 
   @Column()
   userId: string;
-
-  @ManyToOne(() => User, (user) => user.posts)
-  @JoinColumn({ name: 'userId', referencedColumnName: '_id' })
-  user: User;
 
   @ManyToOne(() => Place, (place) => place.posts, { nullable: true })
   @JoinColumn({ name: 'placeId', referencedColumnName: '_id' })

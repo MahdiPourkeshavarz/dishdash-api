@@ -1,8 +1,6 @@
 /* eslint-disable prettier/prettier */
 import { Exclude } from 'class-transformer';
-import { WishlistItem } from 'src/interactions/entity/wishlist.entity';
-import { Post } from 'src/posts/entity/post.entity';
-import { Entity, ObjectIdColumn, Column, ObjectId, OneToMany } from 'typeorm';
+import { Entity, ObjectIdColumn, Column, ObjectId } from 'typeorm';
 
 @Entity()
 export class User {
@@ -25,12 +23,6 @@ export class User {
 
   @Column({ nullable: true })
   fullName: string;
-
-  @OneToMany(() => Post, (post) => post.user)
-  posts: Post[];
-
-  @OneToMany(() => WishlistItem, (wishlistItem) => wishlistItem.user)
-  wishlistItems: WishlistItem[];
 
   @Column({ nullable: true })
   image: string | null;
