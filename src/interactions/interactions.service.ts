@@ -46,7 +46,6 @@ export class InteractionsService {
   async getWishlistForUser(userId: string): Promise<WishlistItem[]> {
     return this.wishlistRepository.find({
       where: { userId },
-      relations: ['user', 'place'],
     });
   }
 }
