@@ -52,4 +52,7 @@ export class Post {
 
   @Column('double', { array: true, nullable: true })
   search_embedding?: number[];
+
+  @Column()
+  placeId: string;
 }
