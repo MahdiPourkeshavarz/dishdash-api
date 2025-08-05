@@ -117,6 +117,7 @@ export class PostsService {
       likes: 0,
       dislikes: 0,
       search_embedding: embedding,
+      placeId,
     });
 
     const savedPost = await this.postsRepository.save(newPost);
@@ -136,6 +137,16 @@ export class PostsService {
   }
 
   async findAll(bbox?: BboxDto): Promise<Post[]> {
+    this.uploadsService
+      .generateEmbedding('warm up')
+      .then(() => console.log('Embedding model warmed up successfully.'))
+      .catch((err) =>
+        console.error(
+          'Model warm-up failed (this is non-critical):',
+          err.message,
+        ),
+      );
+
     if (!bbox) {
       return this.postsRepository.find({
         relations: ['user', 'place'],

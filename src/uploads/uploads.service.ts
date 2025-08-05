@@ -79,7 +79,7 @@ export class UploadsService {
     }
 
     const apiUrl =
-      'https://router.huggingface.co/hf-inference/models/google/vit-base-patch16-224';
+      'https://api-inference.huggingface.co/models/microsoft/beit-base-patch16-224-pt22k-ft22k';
 
     try {
       const response = await fetch(apiUrl, {
