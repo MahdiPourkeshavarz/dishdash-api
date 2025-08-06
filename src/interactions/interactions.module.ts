@@ -7,10 +7,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { WishlistItem } from './entity/wishlist.entity';
 import { UsersModule } from 'src/users/users.module';
 import { PlacesModule } from 'src/places/places.module';
+import { Interaction } from './entity/interaction.entity';
+import { Rating } from './entity/rating.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([WishlistItem]),
+    TypeOrmModule.forFeature([WishlistItem, Interaction, Rating]),
     UsersModule,
     PlacesModule,
   ],
