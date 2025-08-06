@@ -87,7 +87,8 @@ export class PostsService {
     userId: string,
     file: Express.Multer.File,
   ): Promise<Post> {
-    const { url: imageUrl } = await this.uploadsService.saveFile(file);
+    const uploadResult = await this.uploadsService.uploadPostImage(file);
+    const imageUrl = uploadResult.secure_url;
     const parsedPosition = JSON.parse(createPostDto.position);
 
     let placeId: string | undefined = undefined;
@@ -104,7 +105,6 @@ export class PostsService {
     const textToEmbed = this._buildSearchEmbeddingText(createPostDto, place);
 
     const embedding = await this.uploadsService.generateEmbedding(textToEmbed);
-
     const newPost = this.postsRepository.create({
       description: createPostDto.description,
       satisfaction: createPostDto.satisfaction,
@@ -112,7 +112,7 @@ export class PostsService {
       imageUrl,
       position: parsedPosition,
       userId,
-      place: placeId ? { _id: new ObjectId(placeId) } : undefined,
+      place: place ? place : {},
       tags: parsedTags,
       likes: 0,
       dislikes: 0,
@@ -137,16 +137,6 @@ export class PostsService {
   }
 
   async findAll(bbox?: BboxDto): Promise<Post[]> {
-    this.uploadsService
-      .generateEmbedding('warm up')
-      .then(() => console.log('Embedding model warmed up successfully.'))
-      .catch((err) =>
-        console.error(
-          'Model warm-up failed (this is non-critical):',
-          err.message,
-        ),
-      );
-
     if (!bbox) {
       return this.postsRepository.find({
         relations: ['user', 'place'],

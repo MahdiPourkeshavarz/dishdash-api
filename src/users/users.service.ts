@@ -14,8 +14,6 @@ import * as bcrypt from 'bcrypt';
 import { ObjectId } from 'mongodb';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UploadsService } from 'src/uploads/uploads.service';
-import { promises as fs } from 'fs';
-import { join } from 'path';
 import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
@@ -59,24 +57,11 @@ export class UsersService {
 
     if (file) {
       console.log('Processing file:', file.originalname, file.mimetype);
-      const { url: newImageUrl } = await this.uploadsService.saveFile(file);
-      console.log('New image URL:', newImageUrl);
-      updateData.image = newImageUrl;
-      const baseUrl = 'http://localhost:8000';
+      const uploadResult = await this.uploadsService.uploadProfileImage(file);
+      const newImageUrl = uploadResult.secure_url;
 
-      if (user.image && user.image !== newImageUrl) {
-        try {
-          const oldImageFilename = user.image.split('/').pop();
-          if (oldImageFilename) {
-            await fs.unlink(join(baseUrl, 'Uploads', oldImageFilename));
-          }
-        } catch (error) {
-          console.error(
-            `Failed to delete old profile picture: ${user.image}`,
-            error,
-          );
-        }
-      }
+      console.log('New Cloudinary image URL:', newImageUrl);
+      updateData.image = newImageUrl;
     }
 
     await this.usersRepository.update(id, updateData);

@@ -14,29 +14,66 @@ import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import * as sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
+import { v2 as cloudinary, UploadApiResponse } from 'cloudinary'; // 👈 Import Cloudinary
+import { Readable } from 'stream';
 
 @Injectable()
 export class UploadsService {
   constructor(private configService: ConfigService) {}
-  async saveFile(file: Express.Multer.File): Promise<{ url: string }> {
-    if (!file) {
-      throw new InternalServerErrorException('No file provided');
-    }
+  // async saveFile(file: Express.Multer.File): Promise<{ url: string }> {
+  //   if (!file) {
+  //     throw new InternalServerErrorException('No file provided');
+  //   }
 
-    try {
-      const uploadPath = join(process.cwd(), 'uploads');
-      const extension = file.mimetype.split('/')[1] || 'jpg';
-      const uniqueFilename = `${uuidv4()}.${extension}`;
-      await writeFile(join(uploadPath, uniqueFilename), file.buffer);
+  //   try {
+  //     const uploadPath = join(process.cwd(), 'uploads');
+  //     const extension = file.mimetype.split('/')[1] || 'jpg';
+  //     const uniqueFilename = `${uuidv4()}.${extension}`;
+  //     await writeFile(join(uploadPath, uniqueFilename), file.buffer);
 
-      const baseUrl = process.env.API_BASE_URL || 'http://localhost:8000';
-      const url = `${baseUrl}/uploads/${uniqueFilename}`;
-      console.log('Saved file URL:', url);
-      return { url };
-    } catch (error) {
-      console.error('Error saving file:', error);
-      throw new InternalServerErrorException('Failed to save file');
-    }
+  //     const baseUrl = process.env.API_BASE_URL || 'http://localhost:8000';
+  //     const url = `${baseUrl}/uploads/${uniqueFilename}`;
+  //     console.log('Saved file URL:', url);
+  //     return { url };
+  //   } catch (error) {
+  //     console.error('Error saving file:', error);
+  //     throw new InternalServerErrorException('Failed to save file');
+  //   }
+  // }
+
+  private async uploadToCloudinary(
+    file: Express.Multer.File,
+    folder: string,
+  ): Promise<UploadApiResponse> {
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { resource_type: 'image', folder },
+        (error, result) => {
+          if (error || !result) {
+            console.error('Cloudinary upload error:', error);
+            return reject(
+              new InternalServerErrorException('Failed to upload image.'),
+            );
+          }
+          resolve(result);
+        },
+      );
+      Readable.from(file.buffer).pipe(uploadStream);
+    });
+  }
+
+  async uploadPostImage(
+    file: Express.Multer.File,
+  ): Promise<{ secure_url: string; public_id: string }> {
+    const result = await this.uploadToCloudinary(file, 'dishdash_posts');
+    return { secure_url: result.secure_url, public_id: result.public_id };
+  }
+
+  async uploadProfileImage(
+    file: Express.Multer.File,
+  ): Promise<{ secure_url: string; public_id: string }> {
+    const result = await this.uploadToCloudinary(file, 'dishdash_profiles');
+    return { secure_url: result.secure_url, public_id: result.public_id };
   }
 
   async classifyImage(file: Express.Multer.File): Promise<any> {
@@ -69,7 +106,11 @@ export class UploadsService {
 
     let imageBuffer = file.buffer;
     try {
-      imageBuffer = await sharp(file.buffer).toFormat('jpeg').toBuffer();
+      imageBuffer = await sharp(file.buffer)
+        .withMetadata()
+        .jpeg({ quality: 90 })
+        .toBuffer();
+
       contentType = 'image/jpeg';
     } catch (error) {
       throw new HttpException(
@@ -79,7 +120,7 @@ export class UploadsService {
     }
 
     const apiUrl =
-      'https://api-inference.huggingface.co/models/microsoft/beit-base-patch16-224-pt22k-ft22k';
+      'https://api-inference.huggingface.co/models/facebook/convnext-tiny-224';
 
     try {
       const response = await fetch(apiUrl, {

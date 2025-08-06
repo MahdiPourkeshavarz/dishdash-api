@@ -12,12 +12,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
-  @Post('image')
-  @UseInterceptors(FileInterceptor('file'))
-  uploadImage(@UploadedFile() file: Express.Multer.File) {
-    return this.uploadsService.saveFile(file);
-  }
-
   @Post('classify')
   @UseInterceptors(FileInterceptor('file'))
   classifyImage(@UploadedFile() file: Express.Multer.File) {
