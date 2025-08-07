@@ -137,27 +137,66 @@ export class PostsService {
   }
 
   async findAll(bbox?: BboxDto): Promise<Post[]> {
-    if (!bbox) {
-      return this.postsRepository.find({
-        relations: ['user', 'place'],
+    // 1. Start building the aggregation pipeline.
+    const pipeline: any[] = [];
+
+    // 2. If a bounding box is provided, add the geospatial filter.
+    if (bbox) {
+      const { sw_lat, sw_lng, ne_lat, ne_lng } = bbox;
+      pipeline.push({
+        $match: {
+          position: {
+            $geoWithin: {
+              $box: [
+                [parseFloat(sw_lng), parseFloat(sw_lat)],
+                [parseFloat(ne_lng), parseFloat(ne_lat)],
+              ],
+            },
+          },
+        },
       });
     }
 
-    const { sw_lat, sw_lng, ne_lat, ne_lng } = bbox;
-
-    return this.postsRepository.find({
-      where: {
-        position: {
-          $geoWithin: {
-            $box: [
-              [parseFloat(sw_lng), parseFloat(sw_lat)],
-              [parseFloat(ne_lng), parseFloat(ne_lat)],
-            ],
-          },
+    // 3. Add the $lookup stages to join the 'user' and 'place' data.
+    pipeline.push(
+      {
+        $lookup: {
+          from: 'user', // The name of your user collection
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user',
         },
       },
-      relations: ['user', 'place'],
-    });
+      {
+        $lookup: {
+          from: 'place', // The name of your place collection
+          localField: 'placeId',
+          foreignField: '_id',
+          as: 'place',
+        },
+      },
+      // 4. Use $unwind to convert the joined arrays into single objects.
+      {
+        $unwind: { path: '$user', preserveNullAndEmptyArrays: true },
+      },
+      {
+        $unwind: { path: '$place', preserveNullAndEmptyArrays: true },
+      },
+      // 5. Use $project to explicitly define the final shape of the document.
+      {
+        $project: {
+          // Exclude the large fields by setting them to 0
+          search_embedding: 0,
+          tags: 0,
+          // Also exclude sensitive user data for security
+          'user.password': 0,
+          'user.refreshToken': 0,
+        },
+      },
+    );
+
+    // 6. Execute the aggregation pipeline.
+    return this.postsRepository.aggregate(pipeline).toArray();
   }
 
   async findOne(id: string): Promise<Post> {

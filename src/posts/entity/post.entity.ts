@@ -47,10 +47,10 @@ export class Post {
   @CreateDateColumn()
   createdAt: Date;
 
-  @Column('array')
+  @Column('array', { select: false })
   tags?: string[];
 
-  @Column('double', { array: true, nullable: true })
+  @Column('double', { array: true, nullable: true, select: false })
   search_embedding?: number[];
 
   @Column()
