@@ -20,26 +20,6 @@ import { Readable } from 'stream';
 @Injectable()
 export class UploadsService {
   constructor(private configService: ConfigService) {}
-  // async saveFile(file: Express.Multer.File): Promise<{ url: string }> {
-  //   if (!file) {
-  //     throw new InternalServerErrorException('No file provided');
-  //   }
-
-  //   try {
-  //     const uploadPath = join(process.cwd(), 'uploads');
-  //     const extension = file.mimetype.split('/')[1] || 'jpg';
-  //     const uniqueFilename = `${uuidv4()}.${extension}`;
-  //     await writeFile(join(uploadPath, uniqueFilename), file.buffer);
-
-  //     const baseUrl = process.env.API_BASE_URL || 'http://localhost:8000';
-  //     const url = `${baseUrl}/uploads/${uniqueFilename}`;
-  //     console.log('Saved file URL:', url);
-  //     return { url };
-  //   } catch (error) {
-  //     console.error('Error saving file:', error);
-  //     throw new InternalServerErrorException('Failed to save file');
-  //   }
-  // }
 
   private async uploadToCloudinary(
     file: Express.Multer.File,
