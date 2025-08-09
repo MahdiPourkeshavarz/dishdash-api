@@ -36,11 +36,12 @@ export class SearchService {
             ? 'فست فود پیتزا برگر سوخاری pizza burger fastfood'
             : '';
     const semanticQuery =
-      `${query.term || ''} ${convertedAtmosphere || ''} ${convertedAmenity || ''}`.trim();
+      `${query.term || ''} ${convertedAtmosphere} ${convertedAmenity}`
+        .trim()
+        .replace(/\s\s+/g, ' ');
 
     let queryVector: number[] | null = null;
 
-    // 1. Attempt to generate embedding with a timeout
     if (semanticQuery) {
       try {
         const timeoutPromise = new Promise<null>((resolve) =>
@@ -49,96 +50,89 @@ export class SearchService {
         const embeddingPromise = this.uploadsService.generateEmbedding(
           `query: ${semanticQuery}`,
         );
-        const result = await Promise.race([embeddingPromise, timeoutPromise]);
-        if (result) {
-          queryVector = result;
-        } else {
-          console.warn('Embedding generation timed out.');
-        }
+        queryVector = await Promise.race([embeddingPromise, timeoutPromise]);
+        if (queryVector)
+          console.log('Embedding generated. Performing hybrid search.');
+        else console.warn('Embedding timed out. Using text-only search.');
       } catch (error) {
-        console.error('Embedding generation failed:', error.message);
+        console.error('Embedding failed. Using text-only search.', error);
         queryVector = null;
       }
     }
 
-    // 2. Build the main pipeline, starting on the 'posts' collection
-    const aggregationPipeline: any[] = [];
-
-    // 3. If embedding was successful, add the vector search part
-    if (queryVector) {
-      aggregationPipeline.push(
-        {
-          $vectorSearch: {
-            index: 'search_vector',
-            path: 'search_embedding',
-            queryVector: queryVector,
-            numCandidates: 150,
-            limit: 10,
-          },
-        },
-        {
-          $addFields: {
-            score: { $meta: 'vectorSearchScore' },
-          },
-        },
-        // ✅ THEN, match on that new field.
-        {
-          $match: {
-            score: { $gte: 0.9 },
-          },
-        },
-        {
-          $lookup: {
-            from: 'place',
-            localField: 'placeId',
-            foreignField: '_id',
-            as: 'placeInfo',
-          },
-        },
-        { $unwind: '$placeInfo' },
-        {
-          $replaceRoot: {
-            newRoot: {
-              $mergeObjects: [
-                '$placeInfo',
-                { score: '$score', source: 'post' },
-              ],
-            },
-          },
-        },
-      );
-    }
-
-    // 4. Always merge with the text search results from the 'places' collection
-    aggregationPipeline.push({
-      $unionWith: {
-        coll: 'place',
-        pipeline: [
-          {
-            $search: {
-              index: 'places_search',
-              compound: {
-                should: [
+    const pipeline: any[] = [
+      {
+        $search: {
+          index: 'places_search',
+          compound: {
+            must: query.amenity
+              ? [{ text: { query: query.amenity, path: 'tags.amenity' } }]
+              : [],
+            should: query.term
+              ? [
                   {
                     autocomplete: {
-                      query: query.term || '',
+                      query: query.term,
                       path: 'name',
                       fuzzy: { maxEdits: 1 },
                     },
                   },
-                  { text: { query: query.term || '', path: 'name' } },
-                ],
-                minimumShouldMatch: query.term ? 1 : 0,
+                  { text: { query: query.term, path: 'name' } },
+                ]
+              : [],
+            minimumShouldMatch: query.term ? 1 : 0,
+          },
+        },
+      },
+      { $addFields: { score: { $meta: 'searchScore' }, source: 'place' } },
+      { $limit: 40 },
+    ];
+
+    if (queryVector) {
+      pipeline.push({
+        $unionWith: {
+          coll: 'post',
+          pipeline: [
+            {
+              $vectorSearch: {
+                index: 'search_vector',
+                path: 'search_embedding',
+                queryVector: queryVector,
+                numCandidates: 100,
+                limit: 10,
               },
             },
-          },
-          { $addFields: { score: { $meta: 'searchScore' }, source: 'place' } },
-        ],
-      },
-    });
+            { $addFields: { score: { $meta: 'vectorSearchScore' } } },
+            { $match: { score: { $gte: 0.9 } } },
+            {
+              $lookup: {
+                from: 'place',
+                localField: 'placeId',
+                foreignField: '_id',
+                as: 'placeDetails',
+              },
+            },
+            { $unwind: '$placeDetails' },
+            {
+              $replaceRoot: {
+                newRoot: {
+                  $mergeObjects: [
+                    '$placeDetails',
+                    {
+                      source: 'post',
+                      post_description: '$description',
+                      score: '$score',
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      });
+    }
 
-    // 5. Deduplicate and sort the final combined list
-    aggregationPipeline.push(
+    pipeline.push(
       {
         $group: {
           _id: '$_id',
@@ -151,16 +145,27 @@ export class SearchService {
           newRoot: { $mergeObjects: ['$doc', { score: '$maxScore' }] },
         },
       },
-      { $sort: { score: -1 } },
+      {
+        $addFields: {
+          popularityScore: {
+            $multiply: [
+              { $ifNull: ['$averageRating', 0] },
+              { $log10: { $add: [{ $ifNull: ['$ratingCount', 0] }, 1] } },
+            ],
+          },
+        },
+      },
+      {
+        $addFields: {
+          finalScore: {
+            $add: ['$score', { $multiply: ['$popularityScore', 0.8] }],
+          },
+        },
+      },
+      { $sort: { finalScore: -1 } },
       { $limit: 50 },
     );
 
-    // If there's no query term and no vector, the pipeline will be empty.
-    if (aggregationPipeline.length === 1 && !queryVector) {
-      // Only contains the unionWith
-      return [];
-    }
-
-    return this.postsRepository.aggregate(aggregationPipeline).toArray();
+    return this.placesRepository.aggregate(pipeline).toArray();
   }
 }

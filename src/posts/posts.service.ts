@@ -12,7 +12,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindManyOptions, MongoRepository } from 'typeorm';
+import { MongoRepository } from 'typeorm';
 import { Post } from './entity/post.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { ObjectId } from 'mongodb';
@@ -21,8 +21,8 @@ import { Interaction } from 'src/interactions/entity/interaction.entity';
 import { UploadsService } from 'src/uploads/uploads.service';
 import { BboxDto } from 'src/places/dto/bbox.dto';
 import { PlacesService } from 'src/places/places.service';
-import { ConfigService } from '@nestjs/config';
 import { Place } from 'src/places/entity/place.entity';
+import { FeedQueryDto } from './dto/feed-query.dto';
 
 @Injectable()
 export class PostsService {
@@ -137,10 +137,8 @@ export class PostsService {
   }
 
   async findAll(bbox?: BboxDto): Promise<Post[]> {
-    // 1. Start building the aggregation pipeline.
     const pipeline: any[] = [];
 
-    // 2. If a bounding box is provided, add the geospatial filter.
     if (bbox) {
       const { sw_lat, sw_lng, ne_lat, ne_lng } = bbox;
       pipeline.push({
@@ -157,11 +155,10 @@ export class PostsService {
       });
     }
 
-    // 3. Add the $lookup stages to join the 'user' and 'place' data.
     pipeline.push(
       {
         $lookup: {
-          from: 'user', // The name of your user collection
+          from: 'user',
           localField: 'userId',
           foreignField: '_id',
           as: 'user',
@@ -169,33 +166,94 @@ export class PostsService {
       },
       {
         $lookup: {
-          from: 'place', // The name of your place collection
+          from: 'place',
           localField: 'placeId',
           foreignField: '_id',
           as: 'place',
         },
       },
-      // 4. Use $unwind to convert the joined arrays into single objects.
       {
         $unwind: { path: '$user', preserveNullAndEmptyArrays: true },
       },
       {
         $unwind: { path: '$place', preserveNullAndEmptyArrays: true },
       },
-      // 5. Use $project to explicitly define the final shape of the document.
       {
         $project: {
-          // Exclude the large fields by setting them to 0
           search_embedding: 0,
           tags: 0,
-          // Also exclude sensitive user data for security
           'user.password': 0,
           'user.refreshToken': 0,
         },
       },
     );
 
-    // 6. Execute the aggregation pipeline.
+    return this.postsRepository.aggregate(pipeline).toArray();
+  }
+
+  async findAllForFeed(feedQueryDto: FeedQueryDto): Promise<Post[]> {
+    const page = feedQueryDto.page || 1;
+    const limit = 15;
+    const skip = (page - 1) * limit;
+
+    const pipeline: any[] = [];
+
+    const { sw_lat, sw_lng, ne_lat, ne_lng } = feedQueryDto;
+    pipeline.push({
+      $match: {
+        position: {
+          $geoWithin: {
+            $box: [
+              [parseFloat(sw_lng), parseFloat(sw_lat)],
+              [parseFloat(ne_lng), parseFloat(ne_lat)],
+            ],
+          },
+        },
+      },
+    });
+
+    pipeline.push(
+      {
+        $sort: { createdAt: -1 },
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $lookup: {
+          from: 'user',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $lookup: {
+          from: 'place',
+          localField: 'placeId',
+          foreignField: '_id',
+          as: 'place',
+        },
+      },
+      {
+        $unwind: { path: '$user', preserveNullAndEmptyArrays: true },
+      },
+      {
+        $unwind: { path: '$place', preserveNullAndEmptyArrays: true },
+      },
+      {
+        $project: {
+          search_embedding: 0,
+          tags: 0,
+          'user.password': 0,
+          'user.refreshToken': 0,
+        },
+      },
+    );
+
     return this.postsRepository.aggregate(pipeline).toArray();
   }
 
