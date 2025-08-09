@@ -12,7 +12,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindManyOptions, MongoRepository } from 'typeorm';
+import { MongoRepository } from 'typeorm';
 import { Post } from './entity/post.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { ObjectId } from 'mongodb';
@@ -21,8 +21,8 @@ import { Interaction } from 'src/interactions/entity/interaction.entity';
 import { UploadsService } from 'src/uploads/uploads.service';
 import { BboxDto } from 'src/places/dto/bbox.dto';
 import { PlacesService } from 'src/places/places.service';
-import { ConfigService } from '@nestjs/config';
 import { Place } from 'src/places/entity/place.entity';
+import { FeedQueryDto } from './dto/feed-query.dto';
 
 @Injectable()
 export class PostsService {
@@ -87,7 +87,8 @@ export class PostsService {
     userId: string,
     file: Express.Multer.File,
   ): Promise<Post> {
-    const { url: imageUrl } = await this.uploadsService.saveFile(file);
+    const uploadResult = await this.uploadsService.uploadPostImage(file);
+    const imageUrl = uploadResult.secure_url;
     const parsedPosition = JSON.parse(createPostDto.position);
 
     let placeId: string | undefined = undefined;
@@ -104,7 +105,6 @@ export class PostsService {
     const textToEmbed = this._buildSearchEmbeddingText(createPostDto, place);
 
     const embedding = await this.uploadsService.generateEmbedding(textToEmbed);
-
     const newPost = this.postsRepository.create({
       description: createPostDto.description,
       satisfaction: createPostDto.satisfaction,
@@ -112,7 +112,7 @@ export class PostsService {
       imageUrl,
       position: parsedPosition,
       userId,
-      place: placeId ? { _id: new ObjectId(placeId) } : undefined,
+      place: place ? place : {},
       tags: parsedTags,
       likes: 0,
       dislikes: 0,
@@ -137,26 +137,70 @@ export class PostsService {
   }
 
   async findAll(bbox?: BboxDto): Promise<Post[]> {
-    this.uploadsService
-      .generateEmbedding('warm up')
-      .then(() => console.log('Embedding model warmed up successfully.'))
-      .catch((err) =>
-        console.error(
-          'Model warm-up failed (this is non-critical):',
-          err.message,
-        ),
-      );
+    const pipeline: any[] = [];
 
-    if (!bbox) {
-      return this.postsRepository.find({
-        relations: ['user', 'place'],
+    if (bbox) {
+      const { sw_lat, sw_lng, ne_lat, ne_lng } = bbox;
+      pipeline.push({
+        $match: {
+          position: {
+            $geoWithin: {
+              $box: [
+                [parseFloat(sw_lng), parseFloat(sw_lat)],
+                [parseFloat(ne_lng), parseFloat(ne_lat)],
+              ],
+            },
+          },
+        },
       });
     }
 
-    const { sw_lat, sw_lng, ne_lat, ne_lng } = bbox;
+    pipeline.push(
+      {
+        $lookup: {
+          from: 'user',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $lookup: {
+          from: 'place',
+          localField: 'placeId',
+          foreignField: '_id',
+          as: 'place',
+        },
+      },
+      {
+        $unwind: { path: '$user', preserveNullAndEmptyArrays: true },
+      },
+      {
+        $unwind: { path: '$place', preserveNullAndEmptyArrays: true },
+      },
+      {
+        $project: {
+          search_embedding: 0,
+          tags: 0,
+          'user.password': 0,
+          'user.refreshToken': 0,
+        },
+      },
+    );
 
-    return this.postsRepository.find({
-      where: {
+    return this.postsRepository.aggregate(pipeline).toArray();
+  }
+
+  async findAllForFeed(feedQueryDto: FeedQueryDto): Promise<Post[]> {
+    const page = feedQueryDto.page || 1;
+    const limit = 15;
+    const skip = (page - 1) * limit;
+
+    const pipeline: any[] = [];
+
+    const { sw_lat, sw_lng, ne_lat, ne_lng } = feedQueryDto;
+    pipeline.push({
+      $match: {
         position: {
           $geoWithin: {
             $box: [
@@ -166,8 +210,51 @@ export class PostsService {
           },
         },
       },
-      relations: ['user', 'place'],
     });
+
+    pipeline.push(
+      {
+        $sort: { createdAt: -1 },
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $lookup: {
+          from: 'user',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $lookup: {
+          from: 'place',
+          localField: 'placeId',
+          foreignField: '_id',
+          as: 'place',
+        },
+      },
+      {
+        $unwind: { path: '$user', preserveNullAndEmptyArrays: true },
+      },
+      {
+        $unwind: { path: '$place', preserveNullAndEmptyArrays: true },
+      },
+      {
+        $project: {
+          search_embedding: 0,
+          tags: 0,
+          'user.password': 0,
+          'user.refreshToken': 0,
+        },
+      },
+    );
+
+    return this.postsRepository.aggregate(pipeline).toArray();
   }
 
   async findOne(id: string): Promise<Post> {

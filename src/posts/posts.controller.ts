@@ -22,6 +22,7 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { BboxDto } from 'src/places/dto/bbox.dto';
+import { FeedQueryDto } from './dto/feed-query.dto';
 
 @Controller('posts')
 export class PostsController {
@@ -44,6 +45,11 @@ export class PostsController {
     const userId = req.user?.sub;
     const hasBbox = Object.keys(bboxDto).length > 0;
     return this.postsService.findAll(hasBbox ? bboxDto : undefined);
+  }
+
+  @Get('feed')
+  findAllForFeed(@Query() feedQueryDto: FeedQueryDto) {
+    return this.postsService.findAllForFeed(feedQueryDto);
   }
 
   @Get(':id')

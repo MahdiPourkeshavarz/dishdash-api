@@ -37,4 +37,15 @@ export class InteractionsController {
       excludeExtraneousValues: false,
     });
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':placeId/rate')
+  ratePlace(
+    @Request() req,
+    @Param('placeId') placeId: string,
+    @Body('score') score: number,
+  ) {
+    const userId = req.user.sub;
+    return this.interactionsService.ratePlace(userId, placeId, score);
+  }
 }

@@ -33,4 +33,10 @@ export class Place {
 
   @OneToMany(() => Post, (post) => post.place)
   posts: Post[];
+
+  @Column({ type: 'double', default: 0 })
+  averageRating?: number;
+
+  @Column({ default: 0 })
+  ratingCount?: number;
 }
