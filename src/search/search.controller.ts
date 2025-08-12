@@ -1,5 +1,12 @@
 /* eslint-disable prettier/prettier */
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { SearchService } from './search.service';
 import { SearchDto } from './dto/search-query.dto';
 
@@ -13,5 +20,10 @@ export class SearchController {
       throw new BadRequestException('A search term or atmosphere is required.');
     }
     return this.searchService.hybridSearch(query);
+  }
+
+  @Post('chat')
+  handleChat(@Body('query') userQuery: string) {
+    return this.searchService.handleChatQuery(userQuery);
   }
 }
