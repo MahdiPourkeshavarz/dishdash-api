@@ -8,7 +8,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use(helmet());
   app.enableCors({
-    origin: 'https://localhost:3000',
+    origin: 'https://dishdash-map.vercel.app',
     credentials: true,
   });
   app.useGlobalPipes(
