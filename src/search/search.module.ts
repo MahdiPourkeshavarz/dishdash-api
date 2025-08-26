@@ -7,6 +7,7 @@ import { UploadsModule } from 'src/uploads/uploads.module';
 import { Post } from 'src/posts/entity/post.entity';
 import { Place } from 'src/places/entity/place.entity';
 import { PlacesModule } from 'src/places/places.module';
+import { LangChainService } from './langchain.service';
 
 @Module({
   imports: [
@@ -15,6 +16,6 @@ import { PlacesModule } from 'src/places/places.module';
     PlacesModule,
   ],
   controllers: [SearchController],
-  providers: [SearchService],
+  providers: [SearchService, LangChainService],
 })
 export class SearchModule {}

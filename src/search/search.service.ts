@@ -30,7 +30,7 @@ export class SearchService {
     private readonly placesRepository: MongoRepository<Place>,
   ) {}
 
-  private async _findChatContext(
+  async _findChatContext(
     query: string,
     queryVector: number[],
   ): Promise<PlaceWithContext[]> {
@@ -38,83 +38,88 @@ export class SearchService {
       query.includes(keyword),
     );
 
+    // The pipeline now starts on the 'posts' collection with the vector search
     const pipeline: any[] = [
       {
-        $search: {
-          index: 'places_search',
-          compound: {
-            should: [
+        $vectorSearch: {
+          index: 'search_vector',
+          path: 'search_embedding',
+          queryVector: queryVector,
+          numCandidates: 100,
+          limit: 5, // Get the top 5 most conceptually similar posts
+        },
+      },
+      // This is the correct way to filter by score
+      { $addFields: { score: { $meta: 'vectorSearchScore' } } },
+      { $match: { score: { $gte: 0.85 } } },
+      // Join the found posts with their place information
+      {
+        $lookup: {
+          from: 'place',
+          localField: 'placeId',
+          foreignField: '_id',
+          as: 'placeDetails',
+        },
+      },
+      { $unwind: '$placeDetails' },
+      {
+        $replaceRoot: {
+          newRoot: {
+            $mergeObjects: [
+              '$placeDetails',
               {
-                autocomplete: {
-                  query,
-                  path: 'name',
-                  fuzzy: { maxEdits: 1 },
-                },
+                source: 'post',
+                post_description: '$description',
+                score: '$score',
               },
-              ...(detectedKeywords.length > 0
-                ? [
-                    {
-                      text: {
-                        query: detectedKeywords,
-                        path: ['name', 'tags.cuisine', 'tags.name'],
-                        score: { boost: { value: 5 } },
-                      },
-                    },
-                  ]
-                : []),
             ],
-            minimumShouldMatch: 1,
           },
         },
       },
-      {
-        $addFields: { score: { $meta: 'searchScore' }, source: 'place' },
-      },
-      { $limit: 9 },
     ];
 
+    // Now, merge with the text search results from the 'places' collection
     pipeline.push({
       $unionWith: {
-        coll: 'post',
+        coll: 'place',
         pipeline: [
           {
-            $vectorSearch: {
-              index: 'search_vector',
-              path: 'search_embedding',
-              queryVector: queryVector,
-              numCandidates: 100,
-              limit: 2,
-            },
-          },
-          { $addFields: { score: { $meta: 'vectorSearchScore' } } },
-          { $match: { score: { $gte: 0.85 } } },
-          {
-            $lookup: {
-              from: 'place',
-              localField: 'placeId',
-              foreignField: '_id',
-              as: 'placeDetails',
-            },
-          },
-          { $unwind: '$placeDetails' },
-          {
-            $replaceRoot: {
-              newRoot: {
-                $mergeObjects: [
-                  '$placeDetails',
+            $search: {
+              index: 'places_search',
+              compound: {
+                should: [
                   {
-                    source: 'post',
-                    post_description: '$description',
-                    score: '$score',
+                    autocomplete: {
+                      query,
+                      path: 'name',
+                      fuzzy: { maxEdits: 1 },
+                    },
                   },
+                  ...(detectedKeywords.length > 0
+                    ? [
+                        {
+                          text: {
+                            query: detectedKeywords,
+                            path: ['name', 'tags.cuisine', 'tags.name'],
+                            score: { boost: { value: 5 } },
+                          },
+                        },
+                      ]
+                    : []),
                 ],
+                minimumShouldMatch: 1,
               },
             },
           },
+          {
+            $addFields: { score: { $meta: 'searchScore' }, source: 'place' },
+          },
+          { $limit: 15 },
         ],
       },
     });
 
+    // The final stages for deduplication and sorting remain the same
     pipeline.push(
       {
         $group: {
@@ -128,71 +133,14 @@ export class SearchService {
           newRoot: { $mergeObjects: ['$doc', { score: '$maxScore' }] },
         },
       },
-      { $sort: { score: 1 } },
-      { $limit: 11 },
+      { $sort: { score: -1 } },
+      { $limit: 20 },
     );
 
-    return this.placesRepository.aggregate(pipeline).toArray();
-  }
-
-  async handleChatQuery(userQuery: string): Promise<any> {
-    const queryVector = await this.uploadsService.generateEmbedding(
-      `query: ${userQuery}`,
-    );
-
-    if (!queryVector) {
-      throw new Error('Failed to generate embedding for chat query.');
-    }
-
-    const relevantPlaces = await this._findChatContext(userQuery, queryVector);
-
-    if (relevantPlaces.length === 0) {
-      return {
-        aiResponse:
-          'متاسفانه مکان مناسبی با توجه به درخواست شما پیدا نکردم. می‌توانید سوال خود را به شکل دیگری بپرسید؟',
-        places: [],
-      };
-    }
-
-    const context = relevantPlaces
-      .map(
-        (place) =>
-          `- نام: ${place.name}، رتبه: ${place.averageRating?.toFixed(1) || 'جدید'} (${place.ratingCount || 0} نظر). ${place.post_description ? `یک کاربر گفته: "${place.post_description}"` : ''}`,
-      )
-      .join('\n');
-
-    const prompt = `You are a helpful food assistant for an app called DishDash. Your task is to answer the user's question in a friendly, conversational, and **purely Farsi** way, using ONLY the information provided in the 'Context from Database'. Do not use any English words.
-
-  Context from Database:
-  ${context}
-  ---
-  User's Question: ${userQuery}`;
-
-    console.log(relevantPlaces.length);
-    console.log('calling model');
-
-    const hfSpaceUrl = 'https://mahdipk-dishdash.hf.space/generate';
-    const response = await fetch(hfSpaceUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: prompt,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error('Hugging Face API Error:', response.status, errorBody);
-      throw new Error('Failed to get response from AI model.');
-    }
-
-    const data = await response.json();
-    const aiResponse = data.response;
-
-    return {
-      aiResponse: aiResponse,
-      places: relevantPlaces,
-    };
+    // The aggregation is now run on the 'posts' repository because that's where it starts
+    const result = await this.postsRepository.aggregate(pipeline).toArray();
+    console.log('Final context results:', result.length); // Your log will now appear
+    return result;
   }
 
   async hybridSearch(query: SearchDto): Promise<(Post | Place)[]> {

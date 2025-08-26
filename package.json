@@ -20,6 +20,10 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@langchain/google-genai": "^0.2.16",
+    "@langchain/langgraph": "^0.4.6",
+    "@langchain/langgraph-checkpoint-mongodb": "^0.1.0",
+    "@langchain/mongodb": "^0.1.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
@@ -35,6 +39,7 @@
     "class-validator": "^0.14.2",
     "cloudinary": "^2.7.0",
     "helmet": "^8.1.0",
+    "langchain": "^0.3.31",
     "mongodb": "^6.17.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
@@ -42,7 +47,8 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "sharp": "^0.34.3",
-    "typeorm": "^0.3.25"
+    "typeorm": "^0.3.25",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
