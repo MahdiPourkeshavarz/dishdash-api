@@ -102,7 +102,7 @@ export class LangChainService implements OnModuleInit, OnModuleDestroy {
     const toolNode = new ToolNode(tools);
 
     const model = new ChatGoogleGenerativeAI({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash',
       apiKey: this.configService.get<string>('GOOGLE_API_KEY'),
     }).bindTools(tools);
 
