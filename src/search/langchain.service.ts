@@ -138,10 +138,10 @@ export class LangChainService implements OnModuleInit, OnModuleDestroy {
           4. Do NOT use markdown formatting like ** or * in your final response.
           5. If the tool returns no results or an error, your final response should simply be: "متاسفانه مکان مناسبی پیدا نکردم."
           6. If results are found, summarize the top relevant places in Farsi, including key details like name, description.
+          6. If results are found, summarize the top relevant places in Farsi, including key details like name, description.
           7. Keep your response concise and helpful.
           8. no disclaimer needed in message.
-          9. you dont need to mention phone numbers or coordinates of each place in the answer.
-          10.DO NOT use ratings in your answers.`,
+          9. you dont need to mention phone numbers or coordinates of each place in the answer.`,
         ],
         new MessagesPlaceholder('messages'),
       ]);
