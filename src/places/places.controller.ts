@@ -29,8 +29,19 @@ export class PlacesController {
     return this.placesService.findInBounds(bboxDto);
   }
 
-  @Post('seed')
-  seedDatabase() {
-    return this.placesService.seedDatabase();
-  }
+  //   @Post('seed')
+  //   seedDatabase() {
+  //     return this.placesService.seedDatabase();
+  //   }
+
+  //   @Get('analyze')
+  //   analyzeSeeding() {
+  //     return this.placesService.normalizePlaceCategories();
+  //   }
+
+  //   @Get('empty-amenity')
+  //   async findPlacesWithEmptyAmenity(): Promise<Place[]> {
+  //     return await this.placesService.findPlacesWithEmptyAmenity();
+  //   }
+  // }
 }

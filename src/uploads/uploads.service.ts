@@ -144,9 +144,11 @@ export class UploadsService {
 
   async generateEmbedding(text: string): Promise<number[]> {
     const apiToken = this.configService.get('HUGGING_FACE_API_TOKEN');
-    const apiUrl =
-      'https://api-inference.huggingface.co/models/intfloat/multilingual-e5-large';
+
+    // 1. --- CHANGE THIS LINE ---
+    const apiUrl = 'https://router.huggingface.co/hf-inference';
     const inputText = `passage: ${text}`;
+    const modelName = 'intfloat/multilingual-e5-large';
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -154,7 +156,10 @@ export class UploadsService {
         Authorization: `Bearer ${apiToken}`,
         'Content-Type': 'application/json',
       },
+
+      // 2. --- AND CHANGE THIS OBJECT ---
       body: JSON.stringify({
+        model: modelName, // Add the model name to the body
         inputs: inputText,
         options: { wait_for_model: true },
       }),

@@ -19,8 +19,8 @@ export class Place {
   @ObjectIdColumn()
   _id: ObjectId;
 
-  @Column({ unique: true })
-  osmId: number;
+  @Column()
+  osmId?: number;
 
   @Column()
   name: string;
