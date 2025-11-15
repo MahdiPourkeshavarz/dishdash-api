@@ -583,4 +583,36 @@ export class PlacesService {
 
     return placesWithEmptyAmenity;
   }
+
+  async findPlacesWithEmptyPosition(): Promise<Place[]> {
+    const placesWithEmptyAmenity = await this.placesRepository.find({
+      where: {
+        $or: [
+          { position: { $exists: false } },
+          { position: '' },
+          { position: null },
+        ],
+      },
+    });
+
+    console.log('\n' + '='.repeat(80));
+    console.log('🔍 PLACES WITH EMPTY position');
+    console.log('='.repeat(80));
+    console.log(
+      `\n📊 Total places with empty position: ${placesWithEmptyAmenity.length}\n`,
+    );
+
+    if (placesWithEmptyAmenity.length > 0) {
+      console.log('📋 Place names:');
+      placesWithEmptyAmenity.forEach((place, index) => {
+        console.log(`   ${index + 1}. ${place.name}`);
+      });
+    } else {
+      console.log('✅ No places with empty position found!');
+    }
+
+    console.log('\n' + '='.repeat(80) + '\n');
+
+    return placesWithEmptyAmenity;
+  }
 }

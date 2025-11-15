@@ -143,23 +143,21 @@ export class UploadsService {
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
-    const apiToken = this.configService.get('HUGGING_FACE_API_TOKEN');
+    const apiToken = this.configService.get('HUGGING_FACE_API_TOKEN'); // 1. --- CHANGE THIS LINE ---
+    // This is the correct, task-specific API endpoint structure
 
-    // 1. --- CHANGE THIS LINE ---
-    const apiUrl = 'https://router.huggingface.co/hf-inference';
-    const inputText = `passage: ${text}`;
-    const modelName = 'intfloat/multilingual-e5-large';
-
+    const apiUrl =
+      'https://api-inference.huggingface.co/pipeline/feature-extraction/intfloat/multilingual-e5-large';
+    const inputText = `passage: ${text}`; // const modelName = 'intfloat/multilingual-e5-large'; // No longer needed here
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiToken}`,
         'Content-Type': 'application/json',
-      },
+      }, // 2. --- AND CHANGE THIS OBJECT ---
+      // The model name is removed from the body
 
-      // 2. --- AND CHANGE THIS OBJECT ---
       body: JSON.stringify({
-        model: modelName, // Add the model name to the body
         inputs: inputText,
         options: { wait_for_model: true },
       }),

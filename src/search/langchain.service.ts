@@ -58,22 +58,7 @@ export class LangChainService implements OnModuleInit, OnModuleDestroy {
         try {
           console.log(`Tool called with query: "${query}"`);
 
-          if (!this.uploadsService?.generateEmbedding) {
-            throw new Error(
-              'uploadsService.generateEmbedding is not available',
-            );
-          }
-
-          console.log('Generating query vector...');
-          const queryVector = await this.uploadsService.generateEmbedding(
-            `query: ${query}`,
-          );
-          console.log('Query vector generated, calling _findChatContext...');
-
-          const results = await this.searchService._findChatContext(
-            query,
-            queryVector,
-          );
+          const results = await this.searchService._findChatContext(query);
 
           console.log(results);
 
@@ -142,7 +127,8 @@ export class LangChainService implements OnModuleInit, OnModuleDestroy {
           6. If results are found, summarize the top relevant places in Farsi, including key details like name, description.
           7. Keep your response concise and helpful.
           8. no disclaimer needed in message.
-          9. you dont need to mention phone numbers or coordinates of each place in the answer.`,
+          9. only mention place's name and rating and nothing more!.
+          `,
         ],
         new MessagesPlaceholder('messages'),
       ]);
@@ -209,14 +195,7 @@ export class LangChainService implements OnModuleInit, OnModuleDestroy {
         aiResponse = last.content.map((c: any) => c.text ?? '').join(' ');
       }
 
-      const queryVector = await this.uploadsService.generateEmbedding(
-        `query: ${query}`,
-      );
-
-      const dbResult = await this.searchService._findChatContext(
-        query,
-        queryVector,
-      );
+      const dbResult = await this.searchService._findChatContext(query);
 
       const mentionedPlaces = dbResult.filter((place) =>
         aiResponse.includes(place.name),

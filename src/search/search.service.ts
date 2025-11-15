@@ -30,115 +30,78 @@ export class SearchService {
     private readonly placesRepository: MongoRepository<Place>,
   ) {}
 
-  async _findChatContext(
-    query: string,
-    queryVector: number[],
-  ): Promise<PlaceWithContext[]> {
+  async _findChatContext(query: string): Promise<PlaceWithContext[]> {
     const detectedKeywords = FARSI_FOOD_KEYWORDS.filter((keyword) =>
       query.includes(keyword),
     );
 
-    // The pipeline now starts on the 'posts' collection with the vector search
     const pipeline: any[] = [
       {
-        $vectorSearch: {
-          index: 'search_vector',
-          path: 'search_embedding',
-          queryVector: queryVector,
-          numCandidates: 100,
-          limit: 5, // Get the top 5 most conceptually similar posts
-        },
-      },
-      // This is the correct way to filter by score
-      { $addFields: { score: { $meta: 'vectorSearchScore' } } },
-      { $match: { score: { $gte: 0.85 } } },
-      // Join the found posts with their place information
-      {
-        $lookup: {
-          from: 'place',
-          localField: 'placeId',
-          foreignField: '_id',
-          as: 'placeDetails',
-        },
-      },
-      { $unwind: '$placeDetails' },
-      {
-        $replaceRoot: {
-          newRoot: {
-            $mergeObjects: [
-              '$placeDetails',
+        $search: {
+          index: 'places_search',
+          compound: {
+            should: [
               {
-                source: 'post',
-                post_description: '$description',
-                score: '$score',
+                text: {
+                  query,
+                  path: ['name', 'tags.cuisine', 'tags.name'],
+                  fuzzy: { maxEdits: 1 },
+                },
+              },
+              ...(detectedKeywords.length > 0
+                ? [
+                    {
+                      text: {
+                        query: detectedKeywords,
+                        path: ['name', 'tags.cuisine', 'tags.name'],
+                        score: { boost: { value: 5 } },
+                      },
+                    },
+                  ]
+                : []),
+            ],
+            minimumShouldMatch: 1,
+          },
+        },
+      },
+      {
+        $addFields: {
+          searchScore: { $meta: 'searchScore' },
+          source: 'place',
+        },
+      },
+      {
+        $addFields: {
+          smartRating: {
+            $multiply: [
+              { $ifNull: ['$averageRating', 0] },
+              {
+                $log10: {
+                  $add: [{ $ifNull: ['$ratingCount', 0] }, 1],
+                },
               },
             ],
           },
         },
       },
+      {
+        $addFields: {
+          finalScore: { $add: ['$searchScore', '$smartRating'] },
+        },
+      },
+      { $sort: { finalScore: -1 } },
+      { $limit: 20 },
+
+      {
+        $project: {
+          searchScore: 0,
+          smartRating: 0,
+          finalScore: 0,
+        },
+      },
     ];
 
-    // Now, merge with the text search results from the 'places' collection
-    pipeline.push({
-      $unionWith: {
-        coll: 'place',
-        pipeline: [
-          {
-            $search: {
-              index: 'places_search',
-              compound: {
-                should: [
-                  {
-                    autocomplete: {
-                      query,
-                      path: 'name',
-                      fuzzy: { maxEdits: 1 },
-                    },
-                  },
-                  ...(detectedKeywords.length > 0
-                    ? [
-                        {
-                          text: {
-                            query: detectedKeywords,
-                            path: ['name', 'tags.cuisine', 'tags.name'],
-                            score: { boost: { value: 5 } },
-                          },
-                        },
-                      ]
-                    : []),
-                ],
-                minimumShouldMatch: 1,
-              },
-            },
-          },
-          {
-            $addFields: { score: { $meta: 'searchScore' }, source: 'place' },
-          },
-          { $limit: 15 },
-        ],
-      },
-    });
-
-    // The final stages for deduplication and sorting remain the same
-    pipeline.push(
-      {
-        $group: {
-          _id: '$_id',
-          doc: { $first: '$$ROOT' },
-          maxScore: { $max: '$score' },
-        },
-      },
-      {
-        $replaceRoot: {
-          newRoot: { $mergeObjects: ['$doc', { score: '$maxScore' }] },
-        },
-      },
-      { $sort: { score: -1 } },
-      { $limit: 20 },
-    );
-
-    // The aggregation is now run on the 'posts' repository because that's where it starts
-    const result = await this.postsRepository.aggregate(pipeline).toArray();
+    const result = await this.placesRepository.aggregate(pipeline).toArray();
     console.log('Final context results:', result.length); // Your log will now appear
     return result;
   }
